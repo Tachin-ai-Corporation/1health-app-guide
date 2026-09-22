@@ -9,6 +9,24 @@
 - repo: https://github.com/Tachin-ai-Corporation/1health-app-guide  (clone this for local grep)
 - api_docs (tactical, live, maintained by 1health): https://agents.1health.io/public/prod/llms.txt
 
+## If you are an AI agent — your task, start here
+You were handed this URL to build a real application on **1health**. Do this now:
+1. **Confirm you have three inputs. If any is missing, ASK THE USER for it before continuing:**
+   (a) their front-end prototype (code/repo), (b) 1health **demo** access (a login or launch),
+   (c) the app secret in **server** env — `ONEHEALTH_SECRET_KEY_DEMO` and `APP_ID_DEMO` (never in the browser).
+2. **Read these four, in order** (each is short):
+   - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/rules-of-the-road.md
+   - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/auth-and-launch.md
+   - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/scaffold.md
+   - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/prototype-to-app.md
+
+   (Faster if your tools allow it: `git clone https://github.com/Tachin-ai-Corporation/1health-app-guide` and read/grep it locally.)
+3. **Build the app, screen by screen.** For each feature, find its recipe in
+   https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/recipes/INDEX.md ,
+   then confirm the exact request/response shape at `agents.1health.io` **before** writing each call.
+4. **Obey the Definition of done** (end of this file) and avoid the traps in
+   https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/anti-patterns.md .
+
 ## What you were given
 - **1health DEMO credentials** — a user account you can authenticate as on the demo environment.
 - **A 1health app secret / decrypt key** (`ONEHEALTH_SECRET_KEY_DEMO`) — the "config/decrypt key".
