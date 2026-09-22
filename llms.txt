@@ -13,7 +13,9 @@
 You were handed this URL to build a real application on **1health**. Do this now:
 1. **Confirm you have three inputs. If any is missing, ASK THE USER for it before continuing:**
    (a) their front-end prototype (code/repo), (b) 1health **demo** access (a login or launch),
-   (c) the app secret in **server** env — `ONEHEALTH_SECRET_KEY_DEMO` and `APP_ID_DEMO` (never in the browser).
+   (c) **the user's own 1health app credentials** in **server** env — `APP_ID_DEMO` and
+   `ONEHEALTH_SECRET_KEY_DEMO` (the app's decrypt key). The user registers their **own** 1health app
+   and provisions these themselves; they are never shipped with this guide and never touch the browser.
 2. **Read these four, in order** (each is short):
    - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/rules-of-the-road.md
    - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/auth-and-launch.md
@@ -27,10 +29,14 @@ You were handed this URL to build a real application on **1health**. Do this now
 4. **Obey the Definition of done** (end of this file) and avoid the traps in
    https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/anti-patterns.md .
 
-## What you were given
-- **1health DEMO credentials** — a user account you can authenticate as on the demo environment.
-- **A 1health app secret / decrypt key** (`ONEHEALTH_SECRET_KEY_DEMO`) — the "config/decrypt key".
+## What you need (the user supplies these — they are NOT part of this guide)
 - **A front-end-only prototype** — screens and mock data, no backend wired up.
+- **The user's own 1health app.** Each customer registers their own app in 1health and obtains its
+  **App ID** and **secret / decrypt key** (the "config/decrypt key"), then sets them as **server**
+  env vars — `APP_ID_DEMO` + `ONEHEALTH_SECRET_KEY_DEMO` (and `_PROD` for production). **This guide
+  ships no credentials; every customer uses their own app.** If the user hasn't registered one yet,
+  they do that first — see [setup/auth-and-launch.md](setup/auth-and-launch.md) § "Provision your own app".
+- **A 1health demo login** — the user's own account to authenticate as in the demo environment.
 
 Your job: wire that prototype to 1health, following the rules below. Add no other backend.
 

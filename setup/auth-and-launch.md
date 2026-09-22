@@ -6,6 +6,21 @@ once to obtain OAuth tokens; the browser then talks to the API directly with the
 
 **This is the only place secrets are used, and the only server-side route in your app.**
 
+## Provision your own app (do this first)
+
+Every customer runs their **own** 1health app — **this guide and the template ship no credentials.**
+Before the launch flow will work, you need, per environment:
+
+- an **App ID** (`APP_ID_DEMO` / `APP_ID_PROD`), and
+- an **app secret / decrypt key** (`ONEHEALTH_SECRET_KEY_DEMO` / `_PROD`) used to decrypt the launch payload.
+
+You obtain these by **registering your application in 1health** (an admin/console task), then set them
+as **server** environment variables — never `NEXT_PUBLIC_*`, never in the browser, never committed.
+The user provisions these from their own 1health account and hands them to the build agent **separately**
+(as env vars), not inside this guide. See [register-console-application.md](../recipes/register-console-application.md)
+for registering an app programmatically, and 1health's
+[auth quickstart](https://agents.1health.io/public/prod/api/authentication/agents.md) for credential acquisition.
+
 ## The flow
 
 ```

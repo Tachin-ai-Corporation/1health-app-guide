@@ -41,7 +41,8 @@ Set these server-side (e.g. `.env.local`, or your host's env settings). **Never*
 secret keys with `NEXT_PUBLIC_`.
 
 ```bash
-# Server-only secrets (LPL decryption) — from the app config/decrypt key you were given
+# Server-only secrets (LPL decryption) — from YOUR OWN registered 1health app
+# (see setup/auth-and-launch.md § "Provision your own app"; this guide ships no keys)
 ONEHEALTH_SECRET_KEY_DEMO=...        # required for demo
 ONEHEALTH_SECRET_KEY_PROD=...        # required for prod
 APP_ID_DEMO=...                      # your app's id in the demo environment
