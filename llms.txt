@@ -1,0 +1,64 @@
+# Building on 1health — an LLM's guide
+
+> The single entry point for an AI agent tasked with turning a disconnected
+> front-end prototype into a working, 1health-compliant application.
+> **1health is the ONLY backend.** Read "Start here" before writing any code.
+
+- guide_version: 0.2 (draft — setup + a ~90-recipe library across 13 categories; end-to-end validation next)
+- raw_base: https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/
+- repo: https://github.com/Tachin-ai-Corporation/1health-app-guide  (clone this for local grep)
+- api_docs (tactical, live, maintained by 1health): https://agents.1health.io/public/prod/llms.txt
+
+## What you were given
+- **1health DEMO credentials** — a user account you can authenticate as on the demo environment.
+- **A 1health app secret / decrypt key** (`ONEHEALTH_SECRET_KEY_DEMO`) — the "config/decrypt key".
+- **A front-end-only prototype** — screens and mock data, no backend wired up.
+
+Your job: wire that prototype to 1health, following the rules below. Add no other backend.
+
+## Prime directives (non-negotiable)
+1. **1health is the only backend.** No external database, ORM, or third-party API for app data.
+2. **Exactly one server-side route: `/api/token`.** It decrypts the 1health launch payload with
+   the secret key and exchanges it for OAuth tokens. *Every other API call is client-side.*
+3. **All client calls go through `authFetch`** (Bearer token + automatic refresh) — never raw `fetch`.
+4. **Secrets stay server-side.** `ONEHEALTH_SECRET_KEY_*` live in env vars, never shipped to the browser.
+5. **App-specific data lives in `customData`**, namespaced under `appData.<appId>`.
+
+## How to use this guide
+- **Preferred:** `git clone` the repo and grep locally — you get the whole tree at once.
+- **Or cURL** any file at `raw_base` + `<path>` (e.g. `raw_base` + `setup/rules-of-the-road.md`).
+- **Flow:** read *Start here* → open the *Recipe Index* → for each feature, follow the recipe's
+  links into the **live API docs** for exact request/response shapes. Never guess a payload shape;
+  confirm it in the per-route `agents.md`.
+
+## Start here — the WHAT (read in order)
+- [setup/rules-of-the-road.md](setup/rules-of-the-road.md) — the data model + constraints, one page. **READ FIRST.**
+- [setup/auth-and-launch.md](setup/auth-and-launch.md) — launch payload → token → `authFetch`; the one server route.
+- [setup/scaffold.md](setup/scaffold.md) — start from the app template; required env vars; the file map.
+- [setup/prototype-to-app.md](setup/prototype-to-app.md) — the playbook: prototype screens → 1health features.
+- [setup/conventions.md](setup/conventions.md) — the house rules: server routes, comms, SWR, customData, identity.
+- [setup/anti-patterns.md](setup/anti-patterns.md) — what NOT to do (non-1health datastores, hardcoded ids, …).
+
+## Recipes — the HOW (abstract, reusable patterns)
+- [recipes/INDEX.md](recipes/INDEX.md) — the full, scannable index (~90 recipes, 13 categories). **Navigate from here.**
+
+Foundations (read these four first):
+- [recipes/query-the-data-graph.md](recipes/query-the-data-graph.md) — read entities + relationships (`/api/v2/query`).
+- [recipes/read-write-custom-data.md](recipes/read-write-custom-data.md) — app-specific fields via `customData`.
+- [recipes/schema-discovery.md](recipes/schema-discovery.md) — discover types/attributes/relationships at runtime.
+- [recipes/grid-list-views.md](recipes/grid-list-views.md) — server-defined list views (`/v3/health/grid/*`).
+
+Index categories: reading · writing/extending · workflows (journeys/steps/campaigns) · files & comments ·
+sharing & partners · org/tenant onboarding · patients & clinical records · external integrations ·
+communications · agreements/BAA · app architecture & security · auth & session. Recipes marked **adv**
+are advanced/guardrailed — read [setup/conventions.md](setup/conventions.md) first.
+
+## API reference — the TACTICAL (live; we bridge, we do not duplicate)
+- [api/README.md](api/README.md) — how to pull any route's exact contract on demand.
+- Upstream manifest (all 474 routes): https://agents.1health.io/public/prod/api/manifest.md
+- Per route: `https://agents.1health.io/public/prod/api/<version>/<path>/agents.md` (many also have `examples.md`)
+
+## Definition of done
+- No backend but 1health. Only `/api/token` is server-side. All reads/writes go through `authFetch`.
+- No hardcoded step-field GUIDs (resolve by `label`). `customData` namespaced under `appData.<appId>`.
+- Runs against the DEMO environment with the provided credentials.
