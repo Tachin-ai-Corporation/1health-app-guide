@@ -58,7 +58,7 @@ Two environments, each with its own secret key and base URL:
 
 The environment is auto-detected from `document.referrer` (a `demo.1health` referrer → demo, an
 `app.1health` referrer → prod), otherwise the user picks. It is persisted in a cookie and passed
-to `/api/token`. **You'll normally build and test against demo** with the demo credentials you were given.
+to `/api/token`. **You'll normally build and test against demo** with your own demo login and your own app's demo credentials.
 
 ## The one server route: `/api/token`
 
