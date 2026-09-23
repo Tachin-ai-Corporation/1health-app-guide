@@ -29,7 +29,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [graphql-read-path](graphql-read-path.md) | GraphQL as a third read path (relationship-record attrs, tag lists) |
 | [query-pagination-and-sorting](query-pagination-and-sorting.md) | Page `/query` with `limit`+`offset`; server `sort` by id, client sort otherwise |
 | [bulk-read-and-export](bulk-read-and-export.md) | Export / bulk-read: a `/query` offset loop + client-side filtering |
-| [batched-enrichment](batched-enrichment.md) | Batch-enrich rows with `id=in=(...)` for a field a list omits |
+| [batched-enrichment](batched-enrichment.md) | Batch-enrich rows by id (`id==a,id==b,…`) for a field a list omits |
 | [enrich-grid-with-custom-data](enrich-grid-with-custom-data.md) | Join a grid page with bulk customData by id |
 | [cohort-definitions](cohort-definitions.md) · **adv** | Define, evaluate, and snapshot a cohort (reusable filter trees) |
 

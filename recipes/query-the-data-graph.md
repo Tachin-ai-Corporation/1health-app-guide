@@ -55,7 +55,7 @@ Combine with `and(...)` / `or(...)`.
 |---|---|---|---|
 | `eq` / `neq` | `==` / `!=` | equals / not equals | public docs |
 | `lt` / `le` / `gt` / `ge` | `=lt=` / `=le=` / `=gt=` / `=ge=` | less/greater than (or equal) | public docs |
-| `inList` / (not-in) | `=in=` / `=out=` | value is one of / none of a list | public docs |
+| `inList` / (not-in) | `=in=` / `=out=` | value is one of / none of a list — text attributes; on the numeric `id` it 400s ("not of type: Long"), so use `id==a,id==b` (confirmed on demo) | public docs |
 | `like` / `ilike` | `=like=` / `=ilike=` | substring / case-insensitive substring | platform usage — not in the public operator list |
 | `re` / (negated) | `=re=` / `=nre=` | regex match / non-match | platform usage — not in the public operator list |
 | (contains-ish) | `=c=` / `=nc=` / `=ic=` / `=inc=` | contains / not-contains, case-sensitive / -insensitive | platform usage — not in the public operator list |

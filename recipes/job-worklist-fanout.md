@@ -53,7 +53,8 @@ async function advanceInFlightJobs(campaignId: number) {
   the user navigates away — lift it into a shared function every poller calls.
 - **An un-flagged re-harvest can re-read a result after the vendor deletes it** — persist on settle
   and mark the job harvested.
-- **`id =in= (...)` can 400 on a numeric attribute** on some types — prefer an OR-of-equals filter.
+- **`id=in=(...)` 400s on the numeric `id`** ("… is not of type: Long", confirmed on demo) — use an
+  OR-of-equals filter instead: `id==a,id==b,...`.
 
 ## Related
 

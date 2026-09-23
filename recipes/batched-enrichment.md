@@ -1,12 +1,12 @@
-# Batch-enrich with id=in=()
+# Batch-enrich rows by id
 
 **Use when:** a grid/bulk response you already fetched is missing one field you need (e.g. a real
 step-completion timestamp), and you don't want an N+1 call-per-row loop to backfill it.
-**Routes:** `POST /api/v2/query` (RSQL `id=in=(...)`) → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
+**Routes:** `POST /api/v2/query` (RSQL OR-of-equals: `id==a,id==b,...`) → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
 (same route as query-the-data-graph.md) — or a dedicated bulk-by-id endpoint where the type has one
 (see enrich-grid-with-custom-data.md for the `customData` case)
 **Reference code:** [`lib/api/export-completed-dates.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/export-completed-dates.ts#L33)
-**Seen in:** trc-care-coordinator (`/query` with `id=in=()`); med-adherence-bcbsm (the same
+**Seen in:** trc-care-coordinator (batched `/query` by id); med-adherence-bcbsm (the same
 batched-by-id shape, via `customData`'s own bulk-read endpoint — see enrich-grid-with-custom-data.md)
 
 ## Pattern
@@ -15,9 +15,11 @@ batched-by-id shape, via `customData`'s own bulk-read endpoint — see enrich-gr
    already fetched, it doesn't page a new source.
 2. Split the ids into fixed-size batches (a few dozen up to ~50 is a safe default) — one request
    per batch, not one per id.
-3. For a `/query`-shaped batch: filter `id=in=(id1,id2,...)`, project only the id plus the field(s)
-   you need, and — if the field lives on a relationship — eager-load just that one relationship at
-   `limit: 1`.
+3. For a `/query`-shaped batch: filter with an **OR of equals** — `id==id1,id==id2,...` (a comma
+   between whole comparisons means OR) — project only the id plus the field(s) you need, and — if
+   the field lives on a relationship — eager-load just that one relationship at `limit: 1`. Don't use
+   `id=in=(...)`: confirmed against the demo environment, `/query` rejects `=in=` on the numeric `id`
+   with a 400 ("… is not of type: Long"), though `=in=` works on text attributes.
 4. Map each result back to its source row **by id** — never assume response order matches request
    order.
 5. Fall back deliberately for any id that didn't come back (miss, error, or an empty relationship)
@@ -46,7 +48,7 @@ async function resolveExtraField(
       body: JSON.stringify({
         key: "Organization",       // placeholder type — whatever your ids reference
         attributes: ["id"],
-        filter: `id=in=(${batch.join(",")})`,
+        filter: batch.map((id) => `id==${id}`).join(","), // OR of equals; =in= 400s on numeric id
         relationships: [{ key: "Organization.OrgHasField.FieldRecord", attributes: ["id", "value"], limit: 1 }],
         limit: batch.length,
       }),
@@ -80,8 +82,10 @@ async function resolveExtraField(
 - This is a stopgap for "the bulk source is missing one field," not a substitute for fixing the
   bulk source — batch-enriching more than one or two fields is a sign the grid/customData should
   just carry the field.
-- The bulk-by-id shape isn't always `/query` with `id=in=()` — some data (like `customData`) has
-  its own dedicated bulk-read endpoint; use whichever the type actually offers.
+- **`id=in=(...)` 400s on numeric ids** ("… is not of type: Long") — use `id==a,id==b,...`. Forms
+  like `id==a,b` or `id=in=a,b` are rejected as malformed.
+- The bulk-by-id shape isn't always `/query` — some data (like `customData`) has its own dedicated
+  bulk-read endpoint; use whichever the type actually offers.
 
 ## Related
 
