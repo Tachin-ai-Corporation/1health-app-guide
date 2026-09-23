@@ -1,7 +1,7 @@
 # BAA gating
 
-**Use when:** your app handles PHI and must not let an organization proceed until it has accepted 1health's Business Associate Agreement — an entry gate checked at login/first load, with the accepted document available to view afterward.
-**Routes:** `GET /api/v2/agreement/_type_` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/_type_/agents.md) · `PUT /api/v2/agreement/_type_/accept` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/_type_/accept/agents.md)
+**Use when:** your app handles PHI and must not let an organization proceed until it has accepted 1health's Business Associate Agreement — an entry gate checked at login/first load, with the accepted document available to view afterward. The same mechanism also gates other agreement kinds (e.g. Terms & Conditions) under a different `type` string, so the pattern below applies there too.
+**Routes:** `GET /api/v2/agreement/_type_` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/agents.md) · `PUT /api/v2/agreement/_type_/accept` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/_type_/accept/agents.md)
 **Reference code:** [`lib/api/baa.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/baa.ts) · [`app/api/baa/stamped/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/app/api/baa/stamped/route.ts) · [`lib/baa-stamp.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/baa-stamp.ts)
 **Seen in:** pcp-tcm, expertdx, patient-vault
 
@@ -50,6 +50,8 @@ async function acceptBaa(agreementId: number): Promise<boolean> {
 ## Gotchas
 
 - The agreement is looked up **by name** (a fixed type string), not a numeric id you can hardcode — get the id from the GET response.
+- `type` isn't BAA-specific — the same read/accept shape gates any agreement 1health tracks this way (Terms & Conditions included); only the type string changes.
+- A read can come back showing a **decline**, not just "not yet accepted" — treat those as distinct states rather than collapsing both into "show the gate."
 - Read and accept are **caller-scoped** — calling either under a privileged service key answers/acts for the *service's own* acceptance state, not the org's. See [baa-status-split-identity.md](baa-status-split-identity.md) for when a privileged read of a different, coarser flag is legitimately needed.
 - A read failure must route to the gate, not past it — never treat "couldn't confirm" as "must be fine."
 - If you serve the accepted document back to the user, re-derive the acceptance facts (date, signatory) from the platform at request time rather than accepting them as parameters — a route that stamped caller-supplied facts would let anyone mint a PDF asserting a signature that never happened.

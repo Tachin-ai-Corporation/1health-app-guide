@@ -24,6 +24,21 @@ template baseline
 5. For multi-hop traversal, repeat the same resolution one level deeper and nest the result inside
    the parent relationship's own `relationships` array.
 
+## Primary vs fallback
+
+- **Primary — eager-load the relationship inside `/query`** (this recipe's path): best when you
+  also need the root instance's own attributes, more than one relationship at once, or multi-hop
+  nesting, all in the same round trip.
+- **Fallback — the dedicated relationship-target endpoint**,
+  `POST /api/v2/query/{typeKey}/{instanceId}?relKey=…&targetTypeKey=…` (documented on the
+  [`/v2/query` page](https://agents.1health.io/public/prod/api/v2/query/agents.md)): switch here
+  when you already have the instance id and want just one relationship's targets, with their own
+  `page`/`size`/`orderBy`/`searchText` and a standard page envelope — a natural fit for powering a
+  "records already linked to this one" list or picker. Its `filterBy` is equality-only (a plain
+  key→value map, not RSQL), and `includeRelAttributes` optionally attaches the edge's own attributes
+  to each row — drop back to the primary path the moment you need `contains`/range/"one of"
+  filtering on the target.
+
 ## Minimal example
 
 ```ts
@@ -58,6 +73,9 @@ const rows = await runQueryRows({
   from, not its inverse.
 - Type names in `fromBoClassName`/`toBoClassName` may contain spaces (display formatting) —
   always strip them; the helper does this for you, but a hand-rolled path builder easily forgets.
+- The relationship-target endpoint's `filterBy` only does equality — even if you thread an
+  operator-tagged value through a shared filter-string parser, only the equality split reaches the
+  server; the operator itself is silently discarded.
 
 ## Related
 
@@ -65,4 +83,5 @@ const rows = await runQueryRows({
   `toBoClassName` come from.
 - [query-the-data-graph.md](query-the-data-graph.md) — where the finished path is used, in
   `relationships[].key`.
+- [choose-a-read-path.md](choose-a-read-path.md) — deciding between this and the other read paths.
 - [../api/README.md](../api/README.md)

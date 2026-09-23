@@ -111,6 +111,19 @@ Most modules wrap this once more in a `callApi` helper that returns a uniform
 [recipes/query-the-data-graph.md](../recipes/query-the-data-graph.md) and the template's
 [`lib/api/client.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/client.ts).
 
+### Hardening
+
+The refresh above is **proactive** (it checks expiry before sending). Harden it further:
+
+- Make the on-`401` refresh **single-flight with queued retries** — if several calls `401` at once,
+  they should share one refresh call and each retry off its result, not fire N concurrent refreshes
+  against the same refresh token.
+- Route calls that run before a session exists, or must never affect one, through a separate **bare**
+  wrapper — no bearer, no `401`→refresh→logout handling at all. Turning credentials off per call on
+  `authFetch` isn't the same thing: the shared `401` handler is still attached.
+
+→ [recipes/resilient-api-client.md](../recipes/resilient-api-client.md)
+
 ## Rules
 
 - **Never** call a 1health endpoint with raw `fetch` — you'll skip auth and refresh. Use `authFetch`.

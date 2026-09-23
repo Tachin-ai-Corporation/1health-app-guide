@@ -41,7 +41,7 @@ export async function attachDocument(
   file: { name: string; contentType: string; base64: string },
   documentType: string,
 ) {
-  const res = await callApi<unknown>("document/attach", `/v3/patient/${personId}/attach`, {
+  const res = await callApi<unknown>("document/attach", `/api/v3/patient/${personId}/attach`, {
     method: "POST",
     body: JSON.stringify({ documentType, contentType: file.contentType, name: file.name, data: file.base64 }),
   })
@@ -50,19 +50,19 @@ export async function attachDocument(
 
 export async function listDocuments(personId: string, status: "active" | "all" | "deleted" = "active") {
   const qs = status === "all" ? "?active=all" : status === "deleted" ? "?active=false" : ""
-  const res = await callApi<unknown>("document/list", `/v3/patient/${personId}/attach${qs}`)
+  const res = await callApi<unknown>("document/list", `/api/v3/patient/${personId}/attach${qs}`)
   const rows = Array.isArray(res.data) ? res.data : (res.data as any)?.documents ?? []
   return rows.map(normalizeDoc)
 }
 
 // Always call this immediately before download — the URL expires ~15 min after issue.
 export async function getFreshDownloadUrl(personId: string, documentId: string) {
-  const res = await callApi<unknown>("document/get", `/v3/patient/${personId}/attach/${documentId}`)
+  const res = await callApi<unknown>("document/get", `/api/v3/patient/${personId}/attach/${documentId}`)
   return normalizeDoc(res.data).downloadUrl ?? null
 }
 
 export async function deleteDocument(personId: string, documentId: string) {
-  return callApi("document/delete", `/v3/patient/${personId}/attach/${documentId}`, { method: "DELETE" })
+  return callApi("document/delete", `/api/v3/patient/${personId}/attach/${documentId}`, { method: "DELETE" })
 }
 ```
 

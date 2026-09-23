@@ -3,9 +3,9 @@
 **Use when:** your app collects or derives patient identity and clinical data over a multi-step
 flow (intake, extraction, review) *before* it's certain the case will proceed — and you want to
 avoid creating throwaway or duplicate patient records for every abandoned draft.
-**Routes:** `POST /v2/person/upsert` → [agents.md](https://agents.1health.io/public/prod/api/v2/person/upsert/agents.md) · `POST /v2/person/{id}/medical-record` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · step commit via `POST /v2/journey/{id}/step/{stepId}/submit` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/_id_/step/_stepId_/submit/agents.md)
+**Routes:** `POST /v3/patient` → [agents.md](https://agents.1health.io/public/prod/api/v3/patient/agents.md) · `POST /v2/person/upsert` → [agents.md](https://agents.1health.io/public/prod/api/v2/person/upsert/agents.md) · `POST /v2/person/{id}/medical-record` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · step commit via `POST /v2/journey/{id}/step/{stepId}/submit` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/_id_/step/_stepId_/submit/agents.md)
 **Reference code:** [`lib/expertdx/patient.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/patient.ts)
-**Seen in:** expertdx
+**Seen in:** expertdx · 1health platform usage (staged-file flush)
 
 ## Pattern
 
@@ -13,12 +13,14 @@ avoid creating throwaway or duplicate patient records for every abandoned draft.
    component state) — never create a platform Person "just in case." Only write to the platform the
    moment a human action makes the record real (an order submission, a signed intake) — the point
    past which the draft can no longer just be discarded.
-2. **Create the person with an upsert-style endpoint, not the plain "create a patient" one.** A
-   plain create can produce a person unattached to any organization, which most of the platform
-   (workflow steps that bind to a patient, reading medical records back) then can't see or
-   reference. Explicitly attach the new person to your organization on create — this is not
-   optional bookkeeping, it's what makes the record referenceable at all.
-3. **Never send the fields that let upsert match an existing person** (typically email/phone)
+2. **Create the patient at commit with the v3 patient create — then confirm it's attached to your
+   organization.** Run a scored find first ([patient-find.md](patient-find.md)), create with
+   `POST /api/v3/patient`, and immediately do one org-scoped read of the new patient. A person that
+   isn't attached to your organization is invisible to the rest of the platform (workflow steps that
+   bind to a patient, medical-record reads), so this check is not optional bookkeeping. If the
+   platform reports the person isn't a patient of your context organization, create through the
+   person upsert with its explicit org-attach flag instead (see Primary vs fallback).
+3. **On the upsert fallback, never send the fields that let it match an existing person** (typically email/phone)
    unless you have positively confirmed identity. Upsert's whole point is idempotent
    "create-or-find," and its match keys are documented — sending them on every intake would
    silently fold two different people's records into one chart the moment their contact info
@@ -32,16 +34,39 @@ avoid creating throwaway or duplicate patient records for every abandoned draft.
 6. **Treat partial success as a first-class outcome** — one failed attachment shouldn't discard the
    person you already created or the attachments that did succeed; report failures per item and let
    the caller decide whether to retry or proceed.
+7. **For file attachments specifically**, staging them client-side (grouped by attachment
+   type/purpose) is the file-shaped version of step 1's draft state: hold the raw `File` objects in
+   memory, and only flush each group through the normal upload call
+   ([attachments.md](attachments.md)) once the parent record's id comes back from its own create
+   call — clearing that group's staging entry as it flushes so re-running the flow can't re-upload
+   the same file.
+
+## Primary vs fallback
+
+- **Primary — `POST /api/v3/patient`:** the current create-a-patient API (a scored find first, an
+  org-attachment check right after).
+- **Fallback — `POST /api/v2/person/upsert` with `markAsPatientToContextOrganization: true`:** switch
+  when the new patient isn't visible in your organization's context — the check, or the next step,
+  returns "… is not patient of context organization" or "Person with id: N not found" — or when you
+  specifically want upsert's create-or-find behavior.
 
 ## Minimal example
 
 ```ts
 import { callApi } from "@/lib/api"
 
-// Called ONLY at the point of commitment (e.g. order submission) — never during
+// PRIMARY — called ONLY at the point of commitment (e.g. order submission), never during
 // intake/review, so an abandoned draft never becomes an orphaned patient record.
+export async function createPatientAtCommit(input: { firstName: string; lastName: string; dob: string }) {
+  return callApi<{ id: number }>("patient/create", "/api/v3/patient", {
+    method: "POST",
+    body: JSON.stringify(input), // dob is YYYY-MM-DD; then confirm org attachment before continuing
+  })
+}
+
+// FALLBACK — when the created patient isn't attached to your organization.
 export async function createPersonAtCommit(input: { firstName: string; lastName: string; birthDate: string }) {
-  return callApi<{ id: number }>("person/upsert", "/v2/person/upsert", {
+  return callApi<{ id: number }>("person/upsert", "/api/v2/person/upsert", {
     method: "POST",
     body: JSON.stringify({
       firstName: input.firstName,
@@ -61,23 +86,21 @@ export async function attachRecord(personId: number, input: { name: string; file
     name: input.name, fileId: input.fileId, exportDate: new Date().toISOString(),
     careQualityDataList: input.data,
   })], { type: "application/json" }))
-  return callApi<{ id: number }>("person/attachRecord", `/v2/person/${personId}/medical-record`, {
+  return callApi<{ id: number }>("person/attachRecord", `/api/v2/person/${personId}/medical-record`, {
     method: "POST", body,
   })
 }
 
-// THE TRAP: `POST /v3/patient` also "creates a patient", but produces a person
-// unattached to any organization — later steps/reads then 400 with
-// "Person with id: N not found" or "... is not patient of context organization."
-// Use the upsert endpoint above instead, whenever the person must be workflow-referenceable.
+// If a later step 400s with "Person with id: N not found" or "... is not patient of context
+// organization", the person isn't attached to your organization — use the upsert fallback.
 ```
 
 ## Gotchas
 
-- **`POST /v3/patient` looks like the obvious "create a patient" call, but it doesn't attach the
-  person to your organization** — any workflow step or medical-record read that expects a patient
-  of the *context organization* then 400s. Prefer the upsert endpoint with an explicit
-  organization-attach flag.
+- **Confirm the new patient is attached to your organization.** An example app found that a
+  `POST /v3/patient` create could leave the person unattached, so every workflow step or
+  medical-record read expecting a patient of the *context organization* 400'd. Check right after
+  create; if it isn't attached, use the upsert fallback with its explicit org-attach flag.
 - **Sending email or phone on upsert lets the platform match an existing person** — omit them
   unless you've verified exactly what triggers a match on your tenant; a merged chart is a much
   worse failure than a duplicate one.
@@ -89,10 +112,14 @@ export async function attachRecord(personId: number, input: { name: string; file
   [closed-vocabulary-writes.md](closed-vocabulary-writes.md)).
 - **This defers *platform* record creation, not user-facing state** — keep the draft itself
   somewhere durable (customData) so nothing is lost while it waits to become real.
+- **Staged files are memory-only** — they don't survive a page reload, so a flow that can be
+  abandoned mid-way and resumed later needs a separate durable plan for attachments; don't assume
+  the same drafting approach that works for form fields (e.g. customData) also covers files.
 
 ## Related
 
 - [patient-crud.md](patient-crud.md) — once a person exists, this is how you manage it.
+- [attachments.md](attachments.md) — the upload call each staged file group flushes through.
 - [external-record-to-medical-record.md](external-record-to-medical-record.md) — the record-attach
   step in more detail.
 - [closed-vocabulary-writes.md](closed-vocabulary-writes.md) — the parse-the-400-and-retry idiom.

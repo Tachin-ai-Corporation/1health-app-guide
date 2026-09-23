@@ -15,6 +15,15 @@
 4. On a matching submit: burn the sealed cookie (single use), create the number as a real contact point, and cache a `{contactPointId, last4, verifiedAt}` marker in the user's own `Person` appData — later sends can then skip OTP for an already-verified number.
 5. Fall back gracefully: if the appData cache read is ever unavailable, re-derive "already verified" from the live contact-point list rather than forcing a needless re-verification.
 
+## Primary vs fallback
+
+- **Primary — the public, PKCE-bound OTP** (`POST /api/v3/public/otp/send` + `/verify` — see
+  [verify-a-contact-channel.md](verify-a-contact-channel.md)): works unauthenticated, so reach for
+  it first whenever there's **no session yet**. Try this before assuming you need a self-rolled OTP.
+- **Fallback — this recipe's self-rolled OTP:** for an **already-authenticated** user verifying a
+  new contact point, where the platform's *authenticated* OTP endpoints (`/api/v3/otp/*`) refuse
+  your app's credential. Don't reach for this until you've confirmed that's actually true for you.
+
 ## Minimal example
 
 ```ts
@@ -55,6 +64,8 @@ async function recordVerifiedMobile(personId: number, phoneE164: string) {
 
 ## Related
 
+- [verify-a-contact-channel.md](verify-a-contact-channel.md) — choosing the right verification
+  mechanism, including the public OTP this recipe falls back from.
 - [native-email-and-sms.md](native-email-and-sms.md) — the delivery channel this borrows.
 - [read-write-custom-data.md](read-write-custom-data.md) — the appData caching mechanics.
 - [baa-status-split-identity.md](baa-status-split-identity.md) — another guardrailed pattern from the same app.

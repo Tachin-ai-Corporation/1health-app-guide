@@ -3,7 +3,7 @@
 **Use when:** you need typed, named, admin-configurable fields on a business-object type — so a tenant admin can add a field through a UI without a code deploy, and the field carries an explicit type instead of "whatever shape you put in a JSON blob."
 **Routes:** `GET /v3/custom-data/available-types` · `GET/POST/DELETE /v3/custom-data/definition[/{id}]` · `DELETE /v3/custom-data/field/{id}` · `GET/PATCH /v3/custom-data/instance/{id}` → [manifest](https://agents.1health.io/public/prod/api/manifest.md) (confirm exact doc paths there)
 **Reference code:** [`lib/api/custom-fields.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/api/custom-fields.ts) · [`lib/custom-field-resolution.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/custom-field-resolution.ts#L70)
-**Seen in:** patient-vault (the only example app using this mechanism)
+**Seen in:** patient-vault (the only example app using this mechanism) · 1health platform usage (capacity limits, query-engine hook)
 
 ## Pattern
 
@@ -13,6 +13,20 @@
 4. Per instance, read every defined value with one call — only fields that currently **have** a value come back — and write or clear values with a single `PATCH` (send `null` to clear a field).
 5. Match a field by its **definition name + `displayName`**, never by a raw numeric field id hardcoded in your app — ids are assigned when the definition is created and differ per tenant/environment.
 6. Handle deletion at both levels: dropping one field vs. dropping the whole definition it belongs to.
+7. Each business-object class has a capacity budget on how many typed fields it can carry —
+   commonly up to 20 scalar fields but only 3 `JSON`-typed ones — enforced when you try to *add* a
+   field, not when you use it. `fieldType` accepts a couple of aliases (`INT`/`INTEGER`,
+   `JSONB`/`JSON`) but always echoes the canonical name back.
+8. Typed field values aren't a dead end for reads: the same `POST /api/v2/query` engine that reads
+   ordinary attributes ([query-the-data-graph.md](query-the-data-graph.md)) accepts a sibling
+   `customData: { filters }` request object that filters by a field's `fieldKey` directly, with its
+   own narrower operator set and its own quoting rules — a different mechanism from RSQL-filtering
+   the schemaless blob, even though both happen to share the word "customData." It also requires an
+   application context to be present on the call.
+9. Prefer a bespoke typed sub-resource (its own small CRUD family hung off the parent type, not this
+   generic mechanism) when a field family has cross-field validation rules tied to a type selector —
+   e.g. a numeric reference range that only makes sense when a companion field says "quantitative."
+   See [results-ingestion.md](results-ingestion.md) for a worked example of that trade-off.
 
 ## Minimal example
 
@@ -67,10 +81,22 @@ await callApi("customFields/writeInstance", withApp(`/api/v3/custom-data/instanc
 - A `PATCH` on an instance only accepts field keys that belong to that instance's own business-object class — writing a field defined against the wrong type is rejected.
 - A field just created may not be immediately visible to the very next read — treat this as a [read-after-write-consistency.md](read-after-write-consistency.md) case and poll-with-backoff rather than reading once and giving up.
 - The instance read only returns fields that currently **have** a value — a field with no value set is simply absent from the response, not present-with-null.
+- Deleting a single field is destructive beyond hiding it from forms — confirm that's intended
+  before wiring a "remove this field" action to it. Retiring a field (or its whole definition) frees
+  the slot for reuse **and** clears every instance's stored value for it, so a reused slot can't leak
+  a stale value into an unrelated field later.
+- A typed-field filter on `/query` needs quoting on **every** operator for a spaced value, including
+  inside an "is one of" list — the schemaless-blob filter only auto-quotes after `==`. Don't reuse
+  one quoting helper for both.
+- An instance with no custom data stored at all matches **nothing** for a typed-field filter, even a
+  negated one — a `!=` check won't behave like "not set" against an instance that's never had the
+  field touched.
 
 ## Related
 
 - [read-write-custom-data.md](read-write-custom-data.md) — the schemaless alternative; use it when fields don't need admin-defined structure.
+- [query-the-data-graph.md](query-the-data-graph.md) — the `customData: { filters }` object described above is a sibling feature on this same read engine.
+- [results-ingestion.md](results-ingestion.md) — a real case where a bespoke typed sub-resource replaces this generic mechanism.
 - [read-after-write-consistency.md](read-after-write-consistency.md) — poll-with-backoff after defining or writing a field.
 - [environment-capability-detection.md](environment-capability-detection.md) — treat a 404 from this API family as "not deployed here."
 - [../api/README.md](../api/README.md)

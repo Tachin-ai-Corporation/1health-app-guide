@@ -38,9 +38,33 @@ Pick by what the step's schema looks like:
   one(s) you changed** — read-all → mutate → write-all, never a partial patch. Sent as
   `multipart/form-data` with **`?attachment` required even when there is no file** — it's what
   tells the server to parse the body as the dynamic-fields shape.
-- **C — dynamic fields + a file**: same echo-all body, plus the file in its own multipart part
-  tagged with the file field's id. Removing an uploaded file reuses the same endpoint
-  (delete-by-flag).
+- **C — dynamic fields + a file**: same echo-all body, sent as indexed multipart parts —
+  `rawData[0].data` is the JSON-stringified echoed metadata object, and each field carrying a NEW
+  file gets its own subsequent slot (`rawData[n].file` + `rawData[n].data = { identifier }`),
+  paired by index. Deleting a previously uploaded file (no new file chosen) reuses the identical
+  endpoint with no `.file` part at all: `rawData[n].data = { identifier, name, id, delete: true }`.
+
+## Primary vs fallback
+
+- **Primary — the journey-id routes:** always resolve the running instance's own **journey id**
+  (from a grid row, a resolved campaign, or wherever you found it) and use the generic
+  `journey/{id}/...` family for reading/advancing steps and listing documents. This is documented,
+  and confirmed to resolve correctly whether the journey was started from a campaign or from an
+  order — an order's own id and its journey's id are two different numbers, and mixing them up
+  doesn't necessarily fail loudly (both are plain numeric ids in the same space, so passing the
+  wrong one can silently target the wrong instance rather than 404).
+- **Fallback — the order-keyed aliases:** `GET /api/v2/health/order/{orderId}/journey`,
+  `GET .../order/{orderId}/step/{stepId}/info`, `POST .../order/{orderId}/step/{stepId}/submit`,
+  `GET .../order/{orderId}/documents` (not yet in the published docs) exist and work, but reach for
+  them only if you genuinely hold just the order id and haven't resolved its `journeyId` yet —
+  prefer resolving the journey id and switching to the primary family over depending on these
+  long-term.
+
+> **⚠ Not yet in 1health's published API docs:** `GET /api/v2/health/order/{orderId}/journey`,
+> `GET .../order/{orderId}/step/{stepId}/info`, `POST .../order/{orderId}/step/{stepId}/submit`,
+> `GET .../order/{orderId}/documents`. 1health supports these for third-party apps, but
+> agents.1health.io has no page for them yet — the shapes shown here come from working apps. Test
+> them against demo before you rely on them.
 
 ## Minimal example
 
@@ -81,16 +105,40 @@ const next = await fetchJourneySteps(journeyId)
   every field you fetched, mutating only the changed one(s); a partial body silently drops the rest.
 - **`?attachment` is required on step-submit even without a file** (Recipe B) — omitting it sends
   the wrong body shape.
-- **Steps are a sequence, not a free graph** — branching templates need their own traversal
-  (inspect `key`/`metadata.nodeType`); don't build UI that jumps to an arbitrary step.
-- **Journey-level operations take array-wrapped bodies** even for a single id (assign/unassign
-  users, bulk status) — a common shape mismatch.
+- **A journey's steps are a SINGLE/GROUP/DECISION tree at the source** — the flat array
+  `fetchJourneySteps` gives you is already flattened for you. An unresolved DECISION branch means
+  the true step count is genuinely unknown until a submit resolves which branch was taken; don't
+  treat the current flattened length as final near a branch point. If you ever work from the raw
+  tree instead of the flat endpoint, branching templates need their own traversal (inspect
+  `key`/`metadata.nodeType`) — don't build UI that jumps to an arbitrary step.
+- **A step can be resolved three ways**: by numeric id (`.../step/{stepId}/info`, once you have it
+  from the flat steps list — the normal path), by key/name
+  ([`GET .../step/{stepKey}`](https://agents.1health.io/public/prod/api/v2/journey/_id_/step/agents.md),
+  when you don't have the id yet — but this returns a LIST, since a repeatable step can have
+  multiple submissions; never assume `[0]`), or by reading the whole nested journey tree (rarely
+  needed by a third-party app — see [resolve-actionable-step.md](resolve-actionable-step.md)).
+- **Not every "journey-level bulk" endpoint shares one body shape.** Assign/unassign-users takes an
+  ARRAY of one object even for a single id (`[{ journeyIds, userIds }]`) — but bulk status and the
+  UAT toggle each take a single PLAIN OBJECT with array-valued fields instead:
+  `PUT /journey/status/bulk` is `{ journeyIds, status }`; `PUT /journey/uat` is
+  `{ idsToSet, idsToUnset }`. Check each endpoint's shape individually rather than assuming one
+  convention generalizes.
+- **Journey status has a small, explicit transition graph, not free movement.**
+  `PUT /journey/status/bulk` only accepts three target values — `"In Progress"`, `"On Hold"`,
+  `"Cancelled"` — and the platform rejects some transitions outright (e.g. you cannot move a
+  completed journey back to "In Progress"). "Completed" and "Rejected" are terminal and reached
+  other ways (a step completing normally, or — for an order-sourced journey — the order's own
+  outcome transition), never by setting them through this endpoint.
 
 ## Related
 
 - [dynamic-step-fields.md](dynamic-step-fields.md) — resolving a step's field ids before submit.
 - [provision-templates-and-campaigns.md](provision-templates-and-campaigns.md) — how you get the
   `campaignId` you start journeys from.
+- [campaign-lifecycle-and-audience.md](campaign-lifecycle-and-audience.md) — running, cancelling,
+  and recovering the campaign these journeys are enrolled from.
+- [decision-steps.md](decision-steps.md) — authoring the DECISION nodes that make a journey's step
+  tree branch.
 - [resolve-actionable-step.md](resolve-actionable-step.md) — picking a target step when you don't
   have a running journey's submittable flag to rely on (e.g. a shared/partner campaign).
 - [step-config-notifications-webhooks.md](step-config-notifications-webhooks.md) — a

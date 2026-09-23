@@ -64,6 +64,8 @@ through `authFetch`, using the user's own token. See [auth-and-launch.md](auth-a
 - **Timestamps often have no timezone** — treat as UTC (append `Z`) before parsing.
 - **Pagination differs per endpoint** and `/api/v2/query` exposes no reliable total — detect the
   last page by a short page (`rows.length < pageSize`).
+- **PHI belongs in the request body, never a URL/query string, a console log, or an error-reporting
+  breadcrumb** — shape the call accordingly, not just where you persist the result.
 
 Every recipe restates the gotchas relevant to it. The complete catalog lives in the app template's
 [GOTCHAS.md](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/docs/api/GOTCHAS.md).

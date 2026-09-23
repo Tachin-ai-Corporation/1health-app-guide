@@ -1,7 +1,7 @@
 # Poll-and-diff live sync
 
 **Use when:** several people can act on the same record from different sessions (assign/reassign, a status change) and one viewer's screen needs to reflect another's change without a manual refresh, and there is no webhook/push channel for it.
-**Routes:** `GET /api/v2/journey/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/_id_/agents.md) — poll it on an interval and diff; project only the fields you need to compare.
+**Routes:** `GET /api/v2/journey/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/agents.md) — poll it on an interval and diff; project only the fields you need to compare.
 **Reference code:** [`hooks/use-assignment-watcher.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/hooks/use-assignment-watcher.ts)
 **Seen in:** trc-care-coordinator
 

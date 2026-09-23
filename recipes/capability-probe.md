@@ -41,6 +41,10 @@ async function runCapabilityProbe(base: string, probeRecordId: number, foreignRe
 
 ## Gotchas
 
+- **Run the probe through a bare, interceptor-free client** carrying only the credential under
+  test — not your app's main authenticated client (see
+  [resilient-api-client.md](resilient-api-client.md)). An expected 401/403 on a "should be denied"
+  call must never be able to trigger your primary session's own refresh-or-logout handling.
 - **A "should be denied" call that succeeds is the finding that matters** — it means your own server routes, not the platform, are the only thing stopping a credential from reaching data it shouldn't.
 - **Probe with disposable data, never real records** — this deliberately attempts denied operations, including cross-tenant reads.
 - **Re-run per environment** — demo and prod permissions are not guaranteed to match.
@@ -48,6 +52,7 @@ async function runCapabilityProbe(base: string, probeRecordId: number, foreignRe
 
 ## Related
 
+- [resilient-api-client.md](resilient-api-client.md) — the bare-client isolation this probe needs.
 - [split-identity-service-key.md](split-identity-service-key.md)
 - [server-side-authorization.md](server-side-authorization.md)
 - [environment-capability-detection.md](environment-capability-detection.md)

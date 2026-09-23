@@ -3,10 +3,12 @@
 **Use when:** you need KPI counts for a campaign — journeys by status, and optionally by journey
 tag — formatted, ordered, and labeled the same way the native 1health campaign page shows them,
 not just a raw count dump.
-**Routes:** `GET /api/v2/health/workflow-campaign/{id}` (display config) →
-[agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/agents.md)
+**Routes:** `GET/PUT /api/v2/health/workflow-campaign/{id}` (display config, read and — see below —
+write) → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/agents.md)
 · `POST /api/v2/health/workflow-campaign/{id}/dashboard` (counts) →
 [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/dashboard/agents.md)
+· `POST .../{id}/dashboard/refresh` (force-recompute) →
+[agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/dashboard/refresh/agents.md)
 **Reference code:** [`campaign.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/campaign.ts#L167) (`fetchCampaignDashboard`)
 **Seen in:** trc-care-coordinator (coordinator KPI tiles)
 
@@ -31,6 +33,14 @@ not just a raw count dump.
    surface.
 6. **Fall back to the raw arrays** (unordered, un-relabeled) if the display config isn't available
    for some reason — a plain count is still better than nothing.
+7. **Force a recompute only when you suspect the counts are stale** — e.g. right after a bulk
+   import or bulk tag change. `POST .../dashboard/refresh` takes no body and returns no dashboard
+   data of its own; it's a signal to recompute, followed by a normal dashboard read. It's an
+   optimization, not a precondition — the dashboard read still works without ever calling it.
+8. **`uiDetailsConfig` is admin-writable, through the general campaign-edit `PUT`, not a
+   tiles-specific endpoint.** Round-trip the WHOLE `uiDetailsConfig` blob you read back (the same
+   read-modify-write discipline as any other partial update) — sending a partial config through
+   this general-purpose PUT risks clobbering tiles you didn't mean to touch.
 
 ## Minimal example
 
@@ -73,6 +83,14 @@ export async function fetchCampaignKpis(campaignId: number): Promise<DashboardSt
           : byStatus.get((cfg.status ?? cfg.configName).toLowerCase()) ?? 0,
     }))
 }
+
+// Call ONLY when counts are known/suspected stale (e.g. right after a bulk import) — it returns
+// no data of its own, so always follow it with fetchCampaignKpis().
+export async function refreshThenFetchCampaignKpis(campaignId: number): Promise<DashboardStat[]> {
+  const baseUrl = getOneHealthBaseUrl()
+  await authFetch(`${baseUrl}/api/v2/health/workflow-campaign/${campaignId}/dashboard/refresh`, { method: "POST" })
+  return fetchCampaignKpis(campaignId)
+}
 ```
 
 ## Gotchas
@@ -88,6 +106,11 @@ export async function fetchCampaignKpis(campaignId: number): Promise<DashboardSt
   widens the dashboard call for tiles you never render.
 - **The plain baseline call is enough for status-only KPIs** — only add the details-config round
   trip when you need tag tiles too; it's a second network call.
+- **Refreshing doesn't return the new counts** — it's a fire-and-then-re-read, not a
+  refresh-and-return; always follow it with a normal dashboard read.
+- **The tile-config `PUT` is the general campaign-edit endpoint** — it accepts (and will happily
+  save) any other campaign field too, so build its body from a full read of the campaign, not a
+  hand-built object containing only `uiDetailsConfig`.
 
 ## Related
 
@@ -95,4 +118,6 @@ export async function fetchCampaignKpis(campaignId: number): Promise<DashboardSt
   id to dashboard.
 - [provision-templates-and-campaigns.md](provision-templates-and-campaigns.md) (D3) —
   creating/finding the campaign in the first place.
+- [campaign-lifecycle-and-audience.md](campaign-lifecycle-and-audience.md) — the campaign's
+  run/cancel/finish/restart lifecycle and its pre-flight population count, alongside these KPIs.
 - [bulk-tagging.md](bulk-tagging.md) — applying the journey tags this recipe reads counts for.

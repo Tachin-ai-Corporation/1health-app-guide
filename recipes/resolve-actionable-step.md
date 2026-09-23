@@ -33,6 +33,21 @@ step that does X" in a template whose step names you don't fully control.
    resolution and can never drift apart — see the privileged-proxy note in
    [step-config-notifications-webhooks.md](step-config-notifications-webhooks.md).
 
+## Primary vs fallback
+
+- **Primary — once you have a running journey's id, prefer the flat `GET /journey/{id}/steps`:**
+  it's the purpose-built, already-flattened "list this journey's steps" endpoint — simpler than
+  walking the template tree yourself, and what most third-party apps should default to for "give me
+  the step list."
+- **Fallback — by key, when you know a step's name/key but not its id:**
+  [`GET /journey/{id}/step/{stepKey}`](https://agents.1health.io/public/prod/api/v2/journey/_id_/step/agents.md)
+  resolves it, but returns a LIST (a repeatable step may have more than one submission) — pick by
+  an explicit signal (status, timestamp), never assume `[0]`.
+- **This recipe's structural walk is for a different situation**: resolving a target step
+  cross-org, or before any journey exists yet (you only have a campaign/template). Reach for the
+  relationship-based resolution above specifically then; once a journey is running, the two
+  endpoints above are simpler and should be preferred.
+
 ## Minimal example
 
 ```ts
@@ -86,6 +101,8 @@ const target = children.find((c) => childName(c)?.toLowerCase().includes("upload
   directly; the same prefix rules still apply to its attributes.
 - **Distinguish "genuinely nothing to resolve" from "the query call failed."** Collapsing both into
   one error path hides real outages behind a friendly empty state.
+- **The by-key lookup (`.../step/{stepKey}`) always returns a list**, even when the step can't
+  repeat — indexing `[0]` happens to work until it doesn't; pick by an explicit signal instead.
 
 ## Related
 

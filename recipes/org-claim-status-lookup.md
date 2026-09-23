@@ -3,7 +3,7 @@
 **Use when:** you need to show whether a partner organization has already been "claimed" (has an
 active tenant/admin) and whether it's partnered with you — without ever leaking un-partnered
 contact PII to the browser.
-**Routes:** `GET /api/v2/organization/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/list/agents.md) (search) · `GET /api/v2/organization/{id}` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) (authoritative per-org `claimed` flag)
+**Routes:** `GET /api/v2/organization/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/list/agents.md) (search) · `GET /api/v2/organization/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/agents.md) (authoritative per-org `claimed` flag)
 **Reference code:** [`lib/onehealth/organization-list.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/onehealth/organization-list.ts#L666) (`fetchOrgIsClaimed`, `fetchClaimStatus`) · [`app/api/invite/claim-status/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/app/api/invite/claim-status/route.ts)
 **Seen in:** med-adherence
 

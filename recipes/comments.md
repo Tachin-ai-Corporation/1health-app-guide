@@ -7,7 +7,7 @@
 
 ## Pattern
 
-1. Comments are **not** read via `/query` — list them through the **grid** endpoint family, filtered to one journey, the same family used for list/table views.
+1. Comments are **not** read via `/query` — list them through the **grid** endpoint family, filtered to one thread by either the owning journey's id (`journeyId`) or the owning order's id (`orderId`); both resolve to the same underlying thread, so filter by whichever id you already hold.
 2. Post through the journey's own comment endpoint. The body wraps comments in an **array**, even when posting exactly one.
 3. Sort newest-first server-side (`orderBy` on `updated`, `DESC`) rather than pulling everything and sorting client-side.
 4. Read the grid response defensively — rows arrive under a `data` field; guard for it being empty or missing rather than assuming a fixed shape.
@@ -40,6 +40,22 @@ async function fetchJourneyComments(journeyId: number): Promise<Comment[]> {
   return body.data ?? []
 }
 
+// The same grid call, scoped by the order's own id instead — same thread, no journeyId lookup
+// needed first (useful when all you have in hand is the order id).
+async function fetchOrderComments(orderId: number): Promise<Comment[]> {
+  const baseUrl = getOneHealthBaseUrl()
+  const response = await authFetch(`${baseUrl}/api/v3/health/grid/comment?page=0&size=20`, {
+    method: "POST",
+    body: JSON.stringify({
+      filterBy: [{ key: "orderId", operator: "equals", value: orderId }],
+      orderBy: [{ key: "updated", order: "DESC" }],
+    }),
+  })
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`)
+  const body = await response.json()
+  return body.data ?? []
+}
+
 // POST — body wraps an array, even for a single comment.
 async function postJourneyComment(journeyId: number, content: string): Promise<void> {
   const baseUrl = getOneHealthBaseUrl()
@@ -53,13 +69,15 @@ async function postJourneyComment(journeyId: number, content: string): Promise<v
 
 ## Gotchas
 
-- Comments aren't a `/query`-able type in practice — use the grid endpoint even for a single-journey read.
+- Comments aren't a `/query`-able type in practice — use the grid endpoint even for a single-thread read.
+- Filtering the **grid** by `orderId` reaches the same thread as `journeyId` — no need to resolve an order's journeyId just to read its comments. Posting still goes through the journey-keyed endpoint above (contrast the step/journey routes, which do need the journeyId — see [orders-and-master-orders.md](orders-and-master-orders.md)).
 - The post body's `comments` field is an **array** — posting `{ content }` unwrapped fails.
 - A grid validation error can still come back with a normal 4xx status and a useful message body — check `response.ok` and surface it rather than assuming any non-throw means success.
 - `ownerFirstName`/`ownerLastName`/`ownerEmail` can be `null` when the platform can't resolve the commenting identity — render a fallback label instead of blank space.
 
 ## Related
 
+- [orders-and-master-orders.md](orders-and-master-orders.md) — case notes scoped by an order's own id.
 - [attachments.md](attachments.md) — the other collaboration primitive on a journey.
 - [query-the-data-graph.md](query-the-data-graph.md) — contrast: most reads go through `/query`; this one deliberately doesn't.
 - Concepts: [setup/rules-of-the-road.md](../setup/rules-of-the-road.md).

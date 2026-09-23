@@ -3,9 +3,11 @@
 **Use when:** an unauthenticated visitor needs to provision their own organization in 1health by
 proving a real-world professional identifier (e.g. an NPI), then be handed a link to finish
 claiming it — before any 1health session exists for them.
-**Routes:** external `GET https://npiregistry.cms.hhs.gov/api/` (public registry, not 1health) · `POST /api/v2/organization/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/list/agents.md) · `POST /api/v2/organization/partner/invitation` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partner/invitation/agents.md) · `PUT /api/v2/external-application/{appId}/allowed-organizations` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · `POST /api/v2/url-mapping/generate` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) (+ the contact-point sub-calls — confirm exact shape via the [manifest](https://agents.1health.io/public/prod/api/manifest.md) before coding them)
+**Routes:** 1health's own `GET /api/v2/public/npi/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/public/npi/list/agents.md) (primary identity lookup) · external `GET https://npiregistry.cms.hhs.gov/api/` (public registry, not 1health — fallback when the verification itself must be authoritative) · `GET /api/v2/organization/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/list/agents.md) · `POST /api/v2/organization/partner/invitation` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partner/invitation/agents.md) · `PUT /api/v2/external-application/{appId}/allowed-organizations` (not yet in the published docs) · `POST /api/v2/url-mapping/generate` (not yet in the published docs) (+ the contact-point sub-calls — confirm exact shape via the [manifest](https://agents.1health.io/public/prod/api/manifest.md) before coding them)
 **Reference code:** [`lib/expertdx/registration.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/registration.ts) · [`app/api/register/provision/route.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/app/api/register/provision/route.ts) · [`lib/npi/registry.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/npi/registry.ts)
 **Seen in:** pcp-tcm, expertdx (full NPI → org → invite chain); med-adherence (the invite/PIN/grant-access portion, without the NPI lookup)
+
+> **⚠ Not yet in 1health's published API docs:** `PUT /api/v2/external-application/{appId}/allowed-organizations`, `POST /api/v2/url-mapping/generate`. 1health supports them for third-party apps, but agents.1health.io has no page for them yet — the shapes shown here come from working apps. Test them against demo before you rely on them.
 
 ## Pattern
 
@@ -13,8 +15,14 @@ This is the "big cluster" recipe: it orchestrates several smaller ones (linked b
 self-service flow. It necessarily runs **unauthenticated and server-side**, before any user token
 exists — read the Gotchas before you build this.
 
-1. **Verify the identifier server-side**, against the authoritative public registry, even if the
-   client already checked. Reject invalid/inactive identifiers before touching 1health at all.
+1. **Verify the identifier server-side**, even if the client already checked. Prefer 1health's own
+   `public/npi/list` mirror — one unauthenticated call gives you both a "this looks like a real NPI"
+   signal and the platform-native id (its `.id`, not the 10-digit `.npi` number) that org-create and
+   partner-invite endpoints expect as `npiId`/`organizationNpiId`, so there's no separate step to
+   bridge "the number I verified" into "the id 1health wants." Fall back to the authoritative
+   external registry (below) only when the verification itself — not just the lookup — must be
+   against the federal source, e.g. for a compliance requirement. Reject invalid/inactive
+   identifiers before touching 1health any further.
 2. **Look before you create.** Search 1health for an Organization already carrying that identifier,
    then re-check the exact field on any candidate — a fuzzy text match can return a neighbor. See
    [look-then-create.md](look-then-create.md).
@@ -35,6 +43,16 @@ exists — read the Gotchas before you build this.
    [ndjson-progress-streaming.md](ndjson-progress-streaming.md).
 8. Hand back only what the browser needs to show a result (a name, a link). The user finishes
    registering at that link, entering the PIN that arrived on their own device.
+
+## Primary vs fallback
+
+- **Primary — 1health's own `GET /api/v2/public/npi/list`:** unauthenticated, and its `.id` field is
+  already the value org-create/partner-invitation endpoints want for `npiId`/`organizationNpiId` —
+  no separate id-bridging step needed.
+- **Fallback — the external CMS registry (`npiregistry.cms.hhs.gov`):** switch to it only when the
+  verification itself, not just the lookup, must be against the authoritative federal source (e.g. a
+  compliance requirement) — then still resolve 1health's own id separately before writing anything
+  back to 1health.
 
 ## Minimal example
 
@@ -78,6 +96,18 @@ export async function provisionOrganization(
 }
 ```
 
+```ts
+// Prefer 1health's own mirror for the identifier lookup — see "Primary vs fallback" above.
+async function lookupViaOnehealthMirror(searchText: string, entityTypeCode: 1 | 2 = 2) {
+  const res = await callApi<{ data: Array<{ id: number; npi: string; providerOrganizationName?: string }> }>(
+    "npi/lookup",
+    `/api/v2/public/npi/list?entityTypeCode=${entityTypeCode}&searchText=${encodeURIComponent(searchText)}&page=0&limit=8`,
+  )
+  // Persist `.id` (the platform-native id), never `.npi` (the 10-digit number), as npiId/organizationNpiId.
+  return res.success ? res.data!.data : []
+}
+```
+
 ## Gotchas
 
 - **This can only run server-side, unauthenticated, under a privileged service credential** — there
@@ -95,10 +125,17 @@ export async function provisionOrganization(
   registration outright.
 - **A fuzzy org search can resolve to a neighbor.** Always re-verify the exact identifier field on
   a candidate before treating it as "the same org."
+- **`organization/list` requires `claimFilter` on every call** — there's no unfiltered default; see
+  [partner-org-typeahead.md](partner-org-typeahead.md).
+- **1health's NPI mirror's `entityTypeCode`** distinguishes individual (1) vs organization (2)
+  records — the wrong value returns an empty list, not an error. Persist `.id`, not `.npi` — both
+  are numeric and easy to swap.
 
 ## Related
 
 - [partner-invitation-and-pin.md](partner-invitation-and-pin.md), [grant-app-access.md](grant-app-access.md), [deep-link-invite-url.md](deep-link-invite-url.md), [look-then-create.md](look-then-create.md), [ndjson-progress-streaming.md](ndjson-progress-streaming.md) — the sub-mechanics this recipe orchestrates.
+- [partner-org-typeahead.md](partner-org-typeahead.md) — the same `organization/list` +
+  `claimFilter` search, used interactively instead of server-side.
 - [org-claim-status-lookup.md](org-claim-status-lookup.md) — check whether an org from this flow has since been claimed.
 - [split-identity-service-key.md](split-identity-service-key.md), [server-side-authorization.md](server-side-authorization.md) — the privileged-credential architecture this flow requires.
 - [public-reference-api-proxy.md](public-reference-api-proxy.md) — proxying the external identity registry itself.

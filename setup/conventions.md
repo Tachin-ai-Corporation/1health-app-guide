@@ -54,3 +54,25 @@ onboarding writes). That **split-identity** architecture is powerful but securit
 an **advanced, guardrailed** option (enforce which operations may use the key; re-authorize every
 request server-side; never leak the token). → [split-identity-service-key.md](../recipes/split-identity-service-key.md),
 [server-side-authorization.md](../recipes/server-side-authorization.md)
+
+## 6. Where server data lives
+
+- **SWR stays the default** (§3) for fetching and caching 1health reads.
+- **A query-cache library (e.g. TanStack Query) is an equivalent lane**, not a downgrade — reach for
+  it in a larger app that already wants its richer devtools, mutation/invalidation helpers, or finer
+  per-query stale/GC tuning. Don't run both in the same app for the same data.
+- **One-off calls** (a single component's own fetch-on-mount, nothing else needs the result) may use
+  a plain `useEffect` + `AbortController`, aborted in its cleanup — no library needed for a read
+  nothing else shares.
+- **Never use Redux (or any global store) as a server-data cache.** A store is fine for session/tenant
+  identity and UI flags (which credential is active, a spinner/overlay state) — it should never hold
+  a fetched 1health record. Invalidate the cache/effect that owns the data instead of copying it into
+  a store "for convenience."
+
+## 7. API layers
+
+1health's REST surface has three layers, not three interchangeable versions of the same thing: v1 is
+low-level primitives, v2 is the everyday wrapper API, and v3 wraps v2 (or is a fresh API of its own —
+grids, patient, user-management…). Start at the highest layer that covers the job and drop a layer
+only when the wrapper above it doesn't expose what you need.
+→ [api-versions-and-layers.md](../recipes/api-versions-and-layers.md)

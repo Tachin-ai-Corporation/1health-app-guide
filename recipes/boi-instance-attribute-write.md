@@ -1,13 +1,13 @@
 # Write a raw BOI instance attribute
 
 **Use when:** you need to write an attribute that no typed REST endpoint exposes — some verification flag or note field that exists only as a raw attribute on the business-object instance.
-**Routes:** `GET/PUT /api/v1/boi/{id}` → [manifest](https://agents.1health.io/public/prod/api/manifest.md) (confirm the exact doc path there)
+**Routes:** `GET/PUT /api/v1/boi/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v1/boi/agents.md)
 **Reference code:** [`lib/api/contact-points.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/contact-points.ts#L148) (`verifyContactPoint`)
 **Seen in:** trc-care-coordinator (writing verification attributes on a ContactPoint instance)
 
 ## Pattern
 
-1. Treat this as an **escape hatch**, not a default — reach for it only once you've confirmed the object's typed REST surface genuinely has no route for the field you need to set.
+1. Treat this as an **escape hatch**, not a default — reach for it only once you've confirmed the object's typed REST surface genuinely has no route for the field you need to set. `/v1/boi` is the basement layer beneath every v2/v3 wrapper (see [api-versions-and-layers.md](api-versions-and-layers.md)) — this recipe is the rare, legitimate case for dropping all the way down to it.
 2. `GET /api/v1/boi/{id}?dataView=full` returns the instance's full attribute list; each entry carries a stable `attribute.key` string and a per-tenant numeric `attribute.id`.
 3. **Resolve the numeric attribute id by matching `attribute.key`** on every call — never hardcode the numeric id, since it's schema-specific and differs across tenants/environments.
 4. `PUT /api/v1/boi/{id}` with `{ attributes: { "<numericId>": "<value>" } }` is a **sparse patch** — only the keys you include are touched; everything else on the instance is left alone.

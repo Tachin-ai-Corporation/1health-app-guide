@@ -4,9 +4,15 @@
 acceptance stamp, a computed overlay — or you must produce one with no browser present. (If you're
 just letting someone save what's already on their own screen, see the last Gotcha — a client-side
 print often beats this.)
-**Routes:** composes existing reads, e.g. `GET /api/v2/agreement/{type}` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/_type_/agents.md) and `GET /api/v2/file/{id}/download` → [route docs](https://agents.1health.io/public/prod/api/manifest.md); the render/stamp step itself is local, not a 1health call.
+**Routes:** composes existing reads, e.g. `GET /api/v2/agreement/{type}` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/agents.md) and `GET /api/v2/file/{id}/download` → [route docs](https://agents.1health.io/public/prod/api/manifest.md); the render/stamp step itself is local, not a 1health call.
 **Reference code:** [`lib/baa-stamp.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/baa-stamp.ts#L150) · [`app/api/baa/stamped/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/app/api/baa/stamped/route.ts#L29)
 **Seen in:** pcp-tcm (acceptance stamp on a legal agreement)
+
+> **Try 1health's own document generation first.** For a lab requisition, test-result report, or
+> branded requisition, 1health generates the PDF for you — see
+> [platform-generated-documents.md](platform-generated-documents.md). Reach for this recipe's own
+> compositing approach only for document kinds the platform doesn't already generate — like the
+> stamped-agreement example below.
 
 ## Pattern
 
@@ -94,5 +100,7 @@ export async function GET() {
 
 ## Related
 
+- [platform-generated-documents.md](platform-generated-documents.md) — the primary path for
+  requisition/result/branded-requisition PDFs; try it before reaching for this recipe.
 - [baa-gating.md](baa-gating.md) — the agreement-acceptance flow this often stamps.
 - [read-write-custom-data.md](read-write-custom-data.md) · [../setup/rules-of-the-road.md](../setup/rules-of-the-road.md)

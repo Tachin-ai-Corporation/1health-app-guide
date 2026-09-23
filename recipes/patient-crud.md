@@ -7,6 +7,11 @@ like contacts, addresses, aliases, external identifiers, and deceased status —
 **Reference code:** [`lib/api/patient.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/api/patient.ts)
 **Seen in:** patient-vault
 
+> **During intake, check for an existing patient first.** Run the scored find
+> ([patient-find.md](patient-find.md)) before creating — only call the v3 create below when
+> there's no acceptable match, and confirm the new patient is attached to your organization
+> afterward ([deferred-record-creation.md](deferred-record-creation.md) — check + fallback).
+
 ## Pattern
 
 1. **Model the patient as one root record plus independent sub-resource collections** hanging off
@@ -59,12 +64,12 @@ function unwrapList<T>(data: unknown, ...keys: string[]): T[] {
 }
 
 export async function listContacts(personId: string) {
-  const res = await callApi<unknown>("person/listContacts", `/v3/patient/${personId}/contact`)
+  const res = await callApi<unknown>("person/listContacts", `/api/v3/patient/${personId}/contact`)
   return unwrapList<{ id: number; type: string; value: string }>(res.data, "contacts", "content", "items", "data")
 }
 
 export async function patchPerson(id: string, patch: { sexAtBirth?: string }) {
-  return callApi("person/patch", `/v3/patient/${id}`, {
+  return callApi("person/patch", `/api/v3/patient/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ ...patch, sexAtBirth: mapToApi(SEX_TO_API, patch.sexAtBirth) }),
   })
@@ -72,7 +77,7 @@ export async function patchPerson(id: string, patch: { sexAtBirth?: string }) {
 
 // ---- 400-vs-404 body sniffing ----
 export async function fetchDeceasedRecord(personId: string) {
-  const res = await callApiRaw(`/v3/patient/${personId}/deceased`)
+  const res = await callApiRaw(`/api/v3/patient/${personId}/deceased`)
   const text = await res.text().catch(() => "")
   if (res.ok) return text ? JSON.parse(text) : null
   const body = (() => { try { return JSON.parse(text) } catch { return {} as any } })()
@@ -83,11 +88,11 @@ export async function fetchDeceasedRecord(personId: string) {
 
 // ---- 409-on-create -> fall back to PATCH ----
 export async function setDeceased(personId: string, body: { deceasedDate: string }) {
-  const created = await callApi("person/setDeceased", `/v3/patient/${personId}/deceased`, {
+  const created = await callApi("person/setDeceased", `/api/v3/patient/${personId}/deceased`, {
     method: "POST", body: JSON.stringify(body),
   })
   if (!created.success && created.statusCode === 409) {
-    return callApi("person/updateDeceased", `/v3/patient/${personId}/deceased`, {
+    return callApi("person/updateDeceased", `/api/v3/patient/${personId}/deceased`, {
       method: "PATCH", body: JSON.stringify(body),
     })
   }

@@ -3,9 +3,11 @@
 **Use when:** you need a short, brand-able URL that carries an invitation (or similar) target —
 e.g. a link opened from SMS/email that lands a partner organization on a themed registration page
 with a PIN pre-filled.
-**Routes:** `POST /api/v2/url-mapping/generate` → [route docs](https://agents.1health.io/public/prod/api/manifest.md)
+**Routes:** `POST /api/v2/url-mapping/generate` (not yet in the published docs)
 **Reference code:** [`lib/onehealth/url-mapping.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/onehealth/url-mapping.ts#L108) · [`lib/expertdx/registration.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/registration.ts#L532)
 **Seen in:** med-adherence, expertdx, pcp-tcm
+
+> **⚠ Not yet in 1health's published API docs:** `POST /api/v2/url-mapping/generate`. 1health supports it for third-party apps, but agents.1health.io has no page for it yet — the shape shown here comes from working apps. Test it against demo before you rely on it.
 
 ## Pattern
 

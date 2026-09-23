@@ -8,6 +8,12 @@ describes instead of re-hitting the external source (or your own proxy) every ti
 **Reference code:** [`lib/npi/registry.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/npi/registry.ts) (the cached value's source) — the caching write itself is the same primitive as [read-write-custom-data.md](read-write-custom-data.md)
 **Seen in:** pcp-tcm
 
+> **Scope check:** this recipe is for caching an *external* lookup result onto the **specific
+> record** it describes — durable, cross-device. For *global* metadata that isn't "about" any one
+> record — a type's schema, a grid config, branding — use a per-session client-memory cache with a
+> TTL instead (see [schema-discovery.md](schema-discovery.md)'s caching step); don't write that kind
+> of value onto a platform record just because it's also "reference data."
+
 ## Pattern
 
 1. **After a successful external lookup, write the normalized result into the owning instance's
@@ -64,10 +70,16 @@ export async function getOrFetchReferenceProfile(
 - **This is a cache, not a system of record for the external source** — if the upstream data
   changes (e.g., a provider's registry listing), your cached copy won't know until it's next
   refreshed.
+- **Not every "reference data" cache belongs on a platform record.** Global metadata (a type's
+  schema, a grid config) is cheap enough, and shared by enough unrelated records, that a per-session
+  client-memory cache with a TTL is the better tool — reserve this recipe's platform-record write
+  for a value that's genuinely an attribute of the one record it's cached on.
 
 ## Related
 
 - [public-reference-api-proxy.md](public-reference-api-proxy.md) — the usual source of the value
   being cached.
 - [read-write-custom-data.md](read-write-custom-data.md) — the underlying write mechanism.
+- [schema-discovery.md](schema-discovery.md) — the client-memory + TTL pattern for global/type-level
+  reference data (a different job than this recipe).
 - Concepts: [setup/rules-of-the-road.md](../setup/rules-of-the-road.md)

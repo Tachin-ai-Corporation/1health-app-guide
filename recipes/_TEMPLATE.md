@@ -17,6 +17,14 @@ agents.1health.io for exact contracts, and SIDEWAYS to the real example-repo fil
 <The abstract strategy in a few numbered steps. This is the reusable idea, independent of any
 one app. Name the engines/endpoints involved and the order of operations.>
 
+## Primary vs fallback
+
+<Optional — include ONLY when 1health offers two or more ways to do this job. One bullet per
+approach: the primary (the default, and why), then each fallback and exactly when to switch to it.>
+
+- **Primary — <approach>:** <why this is the default>.
+- **Fallback — <approach>:** <the specific situation where you switch to it>.
+
 ## Minimal example
 
 ```ts

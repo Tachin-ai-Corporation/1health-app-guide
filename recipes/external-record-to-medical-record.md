@@ -3,7 +3,9 @@
 **Use when:** an external system (a document-extraction pipeline, a health-information exchange)
 has produced structured clinical data for a patient, and you want it to live as a first-class,
 queryable 1health clinical record rather than trapped in your own customData or a third-party
-store.
+store. If what you're attaching is specifically a lab/test result rather than general clinical
+documentation, a more specific ingestion family exists — see
+[results-ingestion.md](results-ingestion.md) — and is usually the better fit.
 **Routes:** `POST /v2/person/{id}/medical-record` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · read-back via `POST /api/v2/query` → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
 **Reference code:** [`lib/api/medical-record.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/medical-record.ts) · [`lib/api/cqd.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/cqd.ts)
 **Seen in:** pcp-tcm, expertdx
@@ -71,7 +73,7 @@ export async function attachExternalRecord(
       ...(typeName ? { medicalRecordType: { name: typeName } } : {}),
     }))
     const res = await callApi<{ id: number }>(
-      "record/attach", `/v2/person/${personId}/medical-record`, { method: "POST", body },
+      "record/attach", `/api/v2/person/${personId}/medical-record`, { method: "POST", body },
     )
     if (res.success) return res
 
@@ -120,6 +122,8 @@ export async function readAttachedRecord(recordId: number) {
 
 ## Related
 
+- [results-ingestion.md](results-ingestion.md) — the purpose-built family for lab/test results
+  specifically; prefer it over this generic attach when that's what you're recording.
 - [deferred-record-creation.md](deferred-record-creation.md) — creating the Person this record
   attaches to.
 - [closed-vocabulary-writes.md](closed-vocabulary-writes.md) — the general parse-400-and-retry

@@ -62,9 +62,11 @@ async function mergeSafely(
 - This composes with the deep-merge helper from [read-write-custom-data.md](read-write-custom-data.md) — fail-closed governs *whether* you write; deep-merge governs *what* you send.
 - The platform has no compare-and-set, so fail-closed reduces but doesn't eliminate races between two concurrent writers. Pair it with a rebuildable index ([custom-data-as-state-machine.md](custom-data-as-state-machine.md)) to recover from a lost race, and with a dedup ledger when a write is a real-world action that must not double-fire.
 - Log which keys you refused to touch (never their values) when a read fails — it turns a silent data-loss bug into a visible, debuggable one.
+- This "confirm the context, refuse on doubt" discipline isn't unique to a `customData` merge — it applies to any async operation whose correctness depends on a context a concurrent action could change out from under it. A token refresh racing a tenant switch is the same shape: pin which tenant the refresh is *for* before the call, and treat a returned token claiming a different tenant as a failed refresh, not a result to store (see [resilient-api-client.md](resilient-api-client.md)).
 
 ## Related
 
 - [read-write-custom-data.md](read-write-custom-data.md) — the deep-merge mechanics this pattern wraps with a safety check.
 - [custom-data-as-state-machine.md](custom-data-as-state-machine.md) — recovering a cache via rebuild when a race still slips through.
 - [read-after-write-consistency.md](read-after-write-consistency.md) — the companion problem: your write succeeded, but a read right after doesn't see it yet.
+- [resilient-api-client.md](resilient-api-client.md) — the same pin-then-verify discipline applied to a token refresh racing a tenant switch.

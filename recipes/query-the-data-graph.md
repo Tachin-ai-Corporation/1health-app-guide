@@ -49,6 +49,44 @@ RSQL cheat sheet (see `query.ts` for the full set): `eq/neq`, `gt/ge/lt/le`, `ra
 `ilike` (case-insensitive contains), `like`, `re` (regex), JSON ops (`hasKey`, `pathMatches`, …).
 Combine with `and(...)` / `or(...)`.
 
+### Fuller operator reference
+
+| Helper | RSQL token | Meaning | Confirmed |
+|---|---|---|---|
+| `eq` / `neq` | `==` / `!=` | equals / not equals | public docs |
+| `lt` / `le` / `gt` / `ge` | `=lt=` / `=le=` / `=gt=` / `=ge=` | less/greater than (or equal) | public docs |
+| `inList` / (not-in) | `=in=` / `=out=` | value is one of / none of a list | public docs |
+| `like` / `ilike` | `=like=` / `=ilike=` | substring / case-insensitive substring | platform usage — not in the public operator list |
+| `re` / (negated) | `=re=` / `=nre=` | regex match / non-match | platform usage — not in the public operator list |
+| (contains-ish) | `=c=` / `=nc=` / `=ic=` / `=inc=` | contains / not-contains, case-sensitive / -insensitive | platform usage — not in the public operator list |
+
+JSON/JSONB — the public docs list raw Postgres-style tokens; platform usage elsewhere favors named
+equivalents for the same ideas:
+
+| Token | Meaning | Confirmed |
+|---|---|---|
+| `@>` / `<@` | JSON containment (left contains right / right contains left) | public docs |
+| `?` / `?\|` / `?&` | has key / has any of these keys / has all of these keys | public docs |
+| `->` / `->>` | get JSON field (as JSON / as text) | public docs |
+| `#>` / `#>>` | get at JSON path (as JSON / as text) | public docs |
+| `=hk=` / `=hak=` / `=haak=` | has key / has any key / has all keys | platform usage — not in the public operator list |
+| `=jpe=` / `=jpm=` | JSON path exists / JSON path matches | platform usage — not in the public operator list |
+
+`=c=` means opposite things depending on the attribute's type — text substring containment vs. JSON
+structural containment — same token, different semantics.
+
+A **second, independent filter mechanism** lives on the same request: a sibling `customData:
+{ filters }` object (confirmed as a field on the request body in the public docs, though its
+detailed shape isn't spelled out there) addresses **typed** custom fields — see
+[typed-custom-field-definitions.md](typed-custom-field-definitions.md) — by their camelCase
+`fieldKey`, not by RSQL. Per platform usage: it has its own narrower operator subset (`==, !=, =gt=,
+=ge=, =lt=, =le=, =in=, =out=`, plus text-only contains variants) and **requires an application
+context** to be present on the call at all. Quoting differs too: the typed-field filter requires
+quoting any spaced value with *every* operator (including inside an "is one of" list), while the
+plain `filter` string only auto-quotes after `==`. An instance with no custom data stored at all
+matches nothing for a typed-field filter — including a negated one — so a `!=` check won't behave
+the way you'd expect against a "never set" instance.
+
 ## Gotchas
 
 - **Root attributes come back prefixed `ROOT.<Type>.<attr>`**; related attributes as
@@ -62,10 +100,17 @@ Combine with `and(...)` / `or(...)`.
 - **A journey instance is typed `"WorkflowTemplate"`** in the query engine (same name as its
   definition) — distinguish by attributes present, not type name.
 - **A third read path exists** (`POST /api/graphql`) with its own shape — don't conflate it with `/query`.
+- **Two different "customData" filters exist on this same call** — the schemaless `filter` string's
+  JSON operators target the raw blob; the sibling `customData: { filters }` object targets **typed**
+  fields by `fieldKey` and needs an app context. Don't conflate them.
 
 ## Related
 
 - [read-write-custom-data.md](read-write-custom-data.md) — the `customData` you project here.
+- [typed-custom-field-definitions.md](typed-custom-field-definitions.md) — the typed fields the
+  second `customData: { filters }` object addresses.
 - Grid/list views → [grid-list-views.md](grid-list-views.md).
 - Schema discovery (find types & attributes at runtime) → [schema-discovery.md](schema-discovery.md).
+- Deciding which read mechanism to use at all → [choose-a-read-path.md](choose-a-read-path.md).
+- Paging to exhaustion and ordering results → [query-pagination-and-sorting.md](query-pagination-and-sorting.md).
 - Concepts: [setup/rules-of-the-road.md](../setup/rules-of-the-road.md).

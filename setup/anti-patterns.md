@@ -43,6 +43,47 @@ Skipping the Bearer token / auto-refresh (e.g. posting to an automation webhook 
 works only by an unguessable URL and skips the platform's auth. Route every 1health call through
 `authFetch`/`callApi`. A genuine automation webhook is the rare, explicit exception — not a habit.
 
+## ⛔ A shared, instance-wide cancel token
+Wiring one cancellation token onto every request from a client instance — so cancelling it aborts
+every in-flight call sharing that instance at once — is legacy plumbing, not a real cancellation
+strategy; it's easy to end up with one nobody ever actually calls `.cancel()` on.
+
+**Instead:** give every request its own `AbortController`, created by the caller and torn down in
+its own cleanup (an effect unmount, a superseded search, a closed dialog).
+→ [resilient-api-client.md](../recipes/resilient-api-client.md)
+
+## ⛔ Turning credentials off per call instead of using a bare client
+A per-call flag that just skips attaching the bearer on your normal authenticated client is not a
+safe way to make an unauthenticated call — that client's shared `401` handler is still wired up, so
+a stray non-2xx on the "opted-out" call can still trigger a token refresh or a forced logout.
+
+**Instead:** route any call that doesn't need a session through a genuinely separate client with no
+interceptors at all — no bearer, no `401`→refresh→logout handling, a short timeout.
+→ [resilient-api-client.md](../recipes/resilient-api-client.md)
+
+## ⛔ PHI in URLs, query strings, console logs, or error-reporting breadcrumbs
+A `GET` with patient-identifying data in the query string — or a stray `console.log`, or a value
+carried into an error-tracker breadcrumb — puts PHI somewhere server logs, proxies, browser history,
+and third-party tooling can all see, even when your actual datastore is fully compliant.
+
+**Instead:** shape the request so anything patient-identifying travels in a POST/PUT body, and scrub
+error-reporting payloads before they leave the browser. → [rules-of-the-road.md](rules-of-the-road.md)
+
+## ⛔ Kicking off an async bulk-export job and polling it to completion
+Grid/report export-and-poll jobs are unreliable — a builder-owned export shouldn't depend on one
+ever finishing.
+
+**Instead:** page through `/query` with an offset loop and filter/shape the rows client-side.
+→ [bulk-read-and-export.md](../recipes/bulk-read-and-export.md)
+
+## ⛔ Redux (or any global store) as a server-data cache
+Copying a fetched 1health record into Redux/a global store "so any component can read it" duplicates
+the cache your data-fetching layer already maintains — and nothing keeps the two in sync after a
+write.
+
+**Instead:** keep server data in SWR/a query-cache hook (or a one-off effect); reserve a global store
+for session/tenant identity and UI flags only. → [conventions.md](conventions.md) §6
+
 ## ⛔ Presenting a mock as real
 Simulated payments, client-side "de-identification" that isn't, or a self-published "product API"
 description that the app never actually calls — don't ship these as if they were wired up, and

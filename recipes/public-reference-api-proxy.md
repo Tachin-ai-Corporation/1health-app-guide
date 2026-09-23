@@ -70,6 +70,13 @@ export function lookupReference(code: string) {
 
 - **This route is a deliberate, narrow exception to "call 1health directly from the client"** —
   keep it stateless (no writes to any datastore) or it stops being the thin proxy the rule allows.
+- **If the "reference API" is actually 1health's own public endpoint** (its NPI mirror, a country
+  list, and similar) rather than a genuinely external one, you don't need this server-proxy pattern
+  at all — 1health's public routes don't block browser CORS. Call it directly from the client, but
+  through a bare, interceptor-free client (see [resilient-api-client.md](resilient-api-client.md)),
+  never your authenticated client with credentials merely turned off for that one call — the latter
+  still leaves your shared 401-refresh-or-logout handling wired up for a call that should never be
+  able to trigger it.
 - **Always return a usable fallback** (the input code, an "unavailable" flag) rather than a 500 — a
   reference lookup failing shouldn't block the feature it's decorating.
 - **Set an explicit fetch timeout** — a public government/vendor API with no SLA can hang far
@@ -81,4 +88,6 @@ export function lookupReference(code: string) {
 
 - [cache-reference-data-in-custom-data.md](cache-reference-data-in-custom-data.md) — avoid re-hitting
   this proxy for data you've already resolved once.
+- [resilient-api-client.md](resilient-api-client.md) — the bare-client pattern for calling
+  1health's own public endpoints directly, without this proxy.
 - Concepts: [setup/rules-of-the-road.md](../setup/rules-of-the-road.md)
