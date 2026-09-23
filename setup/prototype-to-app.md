@@ -24,6 +24,8 @@ For each entity, decide what it is on the platform:
 - **App-specific fields on an existing type?** Put them in `customData` under `appData.<appId>`.
   → [read-write-custom-data.md](../recipes/read-write-custom-data.md)
 - **A process/workflow?** Model it as a Campaign → Journey → Steps. → *Recipe: workflows* (Phase 3).
+  This works even when no patient is involved: leave out the patient step, and start journeys
+  with just a campaign id. → [workflows-without-a-patient.md](../recipes/workflows-without-a-patient.md)
 
 Record the mapping (prototype entity → 1health type + which fields are attributes vs customData).
 When in doubt: **filterable/sortable → schema attribute; everything else → customData.**

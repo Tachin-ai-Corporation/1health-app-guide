@@ -43,6 +43,19 @@ Skipping the Bearer token / auto-refresh (e.g. posting to an automation webhook 
 works only by an unguessable URL and skips the platform's auth. Route every 1health call through
 `authFetch`/`callApi`. A genuine automation webhook is the rare, explicit exception — not a habit.
 
+## ⛔ Inventing a patient to fit the workflow engine
+Examples: making the acting admin or employee a journey's "patient", adding an assign-patient step
+to a process that has no patient, or turning on `allowMultiplePatientJourneys` so a non-patient
+process can have more than one journey.
+
+**Why it's wrong:** the campaign vocabulary is patient-first ("Labeled Patients", "Cohort
+Patients"), but that only describes who a campaign enrolls. A journey needs nothing but a campaign
+id, and the flag limits journeys per patient, so it doesn't apply when no patient is involved.
+Forcing a patient in puts staff where the platform expects patients.
+
+**Instead:** use a template with no patient step and a campaign with no audience, and start one
+journey per run of the process. → [workflows-without-a-patient.md](../recipes/workflows-without-a-patient.md)
+
 ## ⛔ A sign-in shortcut that skips the launch exchange
 Examples: a mock session, a hard-coded or pasted access token, a "skip auth" flag, or writing a
 token into cookies by hand so a local build "just works."

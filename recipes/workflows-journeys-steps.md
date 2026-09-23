@@ -14,7 +14,8 @@ one step at a time.
    template, started from a campaign. A **Step** is one node in the instance's step sequence.
 2. **Start a journey** from an already-resolved campaign id: `POST /journey` with `{ campaignId }`.
    Optionally seed and submit the first step inline (`submitSteps: [{ key, data }]`) to skip a
-   round trip.
+   round trip. A campaign id is all a journey needs; it doesn't need a patient or a subject
+   ([workflows-without-a-patient.md](workflows-without-a-patient.md)).
 3. **Treat the journey as a state machine, not a graph.** Steps are a (possibly branching)
    sequence. Fetch its steps and find the one that's currently actionable (the one flagged
    submittable) rather than assuming a fixed index.
@@ -135,6 +136,8 @@ const next = await fetchJourneySteps(journeyId)
 - [dynamic-step-fields.md](dynamic-step-fields.md) — resolving a step's field ids before submit.
 - [provision-templates-and-campaigns.md](provision-templates-and-campaigns.md) — how you get the
   `campaignId` you start journeys from.
+- [workflows-without-a-patient.md](workflows-without-a-patient.md) — running a process that has no
+  patient (no patient step, no audience, one journey per run).
 - [campaign-lifecycle-and-audience.md](campaign-lifecycle-and-audience.md) — running, cancelling,
   and recovering the campaign these journeys are enrolled from.
 - [decision-steps.md](decision-steps.md) — authoring the DECISION nodes that make a journey's step

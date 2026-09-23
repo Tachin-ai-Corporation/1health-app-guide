@@ -19,7 +19,10 @@ secure-share, pcp-tcm (see [provision-templates-and-campaigns.md](provision-temp
    (or untagging) records is a separate, ordinary bulk operation you can do any time, before or
    after the campaign exists (see [bulk-tagging.md](bulk-tagging.md)). A campaign can instead
    target a saved, dynamic query — see [cohort-definitions.md](cohort-definitions.md) — rather than
-   a fixed tag set; the two are alternative audience mechanisms, not layers of one system.
+   a fixed tag set; the two are alternative audience mechanisms, not layers of one system. **An
+   audience is optional.** A campaign whose journeys your app starts on demand (one per file or
+   per export) needs none, and no patient has to be involved at all; see
+   [workflows-without-a-patient.md](workflows-without-a-patient.md).
 3. **Check the population before running.** `tagged-instance-count` answers "how many records
    match right now" without running anything — use it to warn before enrolling zero, or an
    unexpectedly large, population. It's a live snapshot: a record tagged/untagged between the check
@@ -78,6 +81,9 @@ await authFetch(`${baseUrl}/api/v2/health/workflow-campaign/${campaignId}/use-la
 - **`cancel` requires a reason string in the body** — a bare `PUT` with no body is rejected.
 - **The audience count is a snapshot, not a lock** — tagging is live, so the population that
   actually gets enrolled when you `run` can differ from what you counted moments earlier.
+- **A campaign with no audience always counts zero here.** `tagged-instance-count` measures the
+  audience, not the journeys your app started itself, so count those journeys instead (the
+  journeys grid, filtered by `workflowCampaignId`).
 
 ## Related
 
@@ -88,6 +94,8 @@ await authFetch(`${baseUrl}/api/v2/health/workflow-campaign/${campaignId}/use-la
 - [cohort-definitions.md](cohort-definitions.md) — the dynamic-query alternative to a fixed
   label-tag audience.
 - [bulk-tagging.md](bulk-tagging.md) — tagging/untagging the records a tag-based audience matches.
+- [workflows-without-a-patient.md](workflows-without-a-patient.md) — a campaign with no audience at
+  all, for a process that has no patient.
 - [campaign-dashboard-aggregation.md](campaign-dashboard-aggregation.md) — reading KPIs and
   refreshing them once stale.
 - [share-with-partner-org.md](share-with-partner-org.md) — sharing a running campaign with a

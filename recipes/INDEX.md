@@ -52,6 +52,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | Recipe | For |
 |---|---|
 | [workflows-journeys-steps](workflows-journeys-steps.md) | Campaign→Template→Journey→Steps; the 3 step-submit recipes |
+| [workflows-without-a-patient](workflows-without-a-patient.md) | Run any process as a workflow — no patient step, no audience, no subject |
 | [dynamic-step-fields](dynamic-step-fields.md) | Resolve step form fields by `label` (per-env GUIDs) |
 | [resolve-actionable-step](resolve-actionable-step.md) | Find the actionable step via the canonical relationship |
 | [provision-templates-and-campaigns](provision-templates-and-campaigns.md) | Find/clone/publish a template + create/activate a campaign |
@@ -189,4 +190,5 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 ---
 **Don't do these:** see [setup/anti-patterns.md](../setup/anti-patterns.md) (non-1health datastores,
 localStorage-as-datastore, third-party mailers by default, hardcoded env ids, skipping `authFetch`,
-async bulk-export jobs, PHI in URLs or logs, sign-in shortcuts, admin-only QA, QA keys in production).
+async bulk-export jobs, PHI in URLs or logs, inventing a patient to fit a workflow, sign-in shortcuts,
+admin-only QA, QA keys in production).

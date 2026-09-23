@@ -4,7 +4,7 @@
 > front-end prototype into a working, 1health-compliant application.
 > **1health is the ONLY backend.** Read "Start here" before writing any code.
 
-- guide_version: 0.4.0 (draft — setup + a ~120-recipe library across 13 categories + a QA standard; key behaviors confirmed against the demo environment)
+- guide_version: 0.4.1 (draft — setup + a ~120-recipe library across 13 categories + a QA standard; key behaviors confirmed against the demo environment)
 - raw_base: https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/
 - repo: https://github.com/Tachin-ai-Corporation/1health-app-guide  (clone this for local grep)
 - api_docs (tactical, live, maintained by 1health): https://agents.1health.io/public/prod/llms.txt

@@ -69,3 +69,5 @@ async function createSharedContainer(
 - [auto-mirror-on-first-write.md](auto-mirror-on-first-write.md) (F4, Advanced)
 - [provision-templates-and-campaigns.md](provision-templates-and-campaigns.md) (D3) — the
   find/clone/publish sequence behind `ensureTemplateGroup`.
+- [workflows-without-a-patient.md](workflows-without-a-patient.md) — the general pattern this
+  product is an instance of: a campaign with no audience, and a patient-less journey per file.

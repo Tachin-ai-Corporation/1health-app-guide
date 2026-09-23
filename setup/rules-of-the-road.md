@@ -35,7 +35,11 @@ through `authFetch`, using the user's own token. See [auth-and-launch.md](auth-a
 - **The schema is introspectable** at runtime: list every type, and any type's attributes and
   relationships, from the API. You can build fully dynamic apps.
 - **Workflows** are **Campaign → Template → Journey (instance) → Steps.** You advance a journey
-  by *submitting its actionable step* — there is no "complete" verb.
+  by *submitting its actionable step* — there is no "complete" verb. Despite the patient-first
+  naming ("Labeled Patients", "Cohort Patients"), workflows aren't only for patients. A template
+  needs no assign-patient step and a journey needs no patient, so any multi-step process (a file
+  exchange, an export run, an approval) can be a journey.
+  → [recipes/workflows-without-a-patient.md](../recipes/workflows-without-a-patient.md)
 - **Apps can self-provision:** find-or-clone a workflow template and create a campaign on a fresh
   tenant, by name — so your app installs its own workflow.
 

@@ -23,8 +23,11 @@ Each step is check-then-act, so re-running the whole flow is safe:
    `?setAsPublished=true`.
 5. **Create a campaign** from the now-published group — but **check for an existing one by name
    first** (or pass a reuse flag); campaign creation is NOT idempotent, unlike every step above it.
-   Give it its audience as a set of label-tag ids (`labelTagIds`); a campaign can instead target a
-   saved, dynamic query (a cohort) rather than a fixed tag set — see
+   If your app starts the journeys itself (one per file, per export, or per request), give the
+   campaign **no audience at all** (`labelTagIds: []`, which is the template's default); see
+   [workflows-without-a-patient.md](workflows-without-a-patient.md). Otherwise, give it its
+   audience as a set of label-tag ids (`labelTagIds`). A campaign can instead target a saved,
+   dynamic query (a cohort) rather than a fixed tag set — see
    [cohort-definitions.md](cohort-definitions.md) — the two are alternative audience mechanisms.
 6. **Activate ("run") the campaign** — required before any journey can attach to it. From here,
    [campaign-lifecycle-and-audience.md](campaign-lifecycle-and-audience.md) covers the rest of the
@@ -81,6 +84,8 @@ else showError(res.error)
   draft/published/history model once you need more than this bootstrap's find-or-clone-or-publish.
 - [cohort-definitions.md](cohort-definitions.md) — targeting a campaign with a dynamic query
   instead of a fixed label-tag set.
+- [workflows-without-a-patient.md](workflows-without-a-patient.md) — a campaign with no audience
+  whose journeys your app starts itself (no patient involved).
 - [stamp-config-onto-journey.md](stamp-config-onto-journey.md) — a template clone does not carry
   step-level notification/webhook config; you copy it separately after provisioning.
 - [resolve-actionable-step.md](resolve-actionable-step.md) — resolving a specific step once you
