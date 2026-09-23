@@ -30,8 +30,8 @@ have the id for.
    enough to render a list, and fetch the full record only on drill-in.
 5. **After a search turns up no acceptable match, create the patient via v3**
    ([patient-crud.md](patient-crud.md)) rather than looping into another search variant hoping for
-   a different answer — then confirm the new patient is attached to your organization
-   ([deferred-record-creation.md](deferred-record-creation.md) has the check and the fallback).
+   a different answer. The v3 create attaches the patient to your organization
+   ([deferred-record-creation.md](deferred-record-creation.md) covers the upsert alternative).
 
 ## Primary vs fallback
 

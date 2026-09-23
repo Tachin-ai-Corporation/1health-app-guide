@@ -38,7 +38,8 @@ pluggable fetch strategy (so swapping which one backs it later isn't a rewrite) 
   where you don't need a real filter — cheaper to call, but only `page`/`limit`/`search`, no RSQL.
 - **Fallback — the relationship-target endpoint:** swap in when you already hold one instance id
   and want just one relationship's targets with their own `page`/`size`/`orderBy`/`searchText` —
-  its `filterBy` is equality-only, so drop back to the primary the moment you need
+  its `filterBy` is equality-only (confirmed on demo: an exact match on the target's attribute;
+  `searchText` matches its name), so drop back to the primary the moment you need
   `contains`/range/"one of" filtering on the target.
 - **Fallback — the grid engine:** swap in the moment a ready-made view exists for the screen you're
   building — pre-flattened and already paginated the way a list UI expects.

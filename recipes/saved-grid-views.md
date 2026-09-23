@@ -9,7 +9,7 @@
 
 1. Store each saved view as its own record: a `gridIdentifier` (which grid this view belongs to), a `name`, and an opaque `configuration` blob (JSON-stringified) — column order/width/visibility, filter model, sort state.
 2. Keep exactly **one** bidirectional mapping table between your UI's column ids and the platform's field names, used both when building `configuration` for a save and when applying it back — don't translate ad hoc at each call site.
-3. List/search saved views by `gridIdentifier` (+ optional name search) with normal pagination; treat a **404** as "no views yet," not an error.
+3. List/search saved views by `gridIdentifier` (+ optional name search) with normal pagination. A grid with no views yet returns **200 with an empty page** (`totalElements: 0`) — confirmed against the demo environment; still treat a 404 as "no views yet" defensively, since an earlier app saw one.
 4. Persist only a **pointer** — the last-applied view's id — client-side (e.g. `localStorage`), and use it to restore the actual configuration from 1health on load. The view data itself is never local-only.
 5. Detect near-duplicate configurations before saving a new view by comparing **visible** columns only, so trivial differences don't create endless near-identical views.
 6. A view can also be marked **global** (visible to every viewer, not just its author) instead of
@@ -55,7 +55,7 @@ async function saveGridView(gridIdentifier: string, name: string, configuration:
   return response.json() as Promise<SavedView>
 }
 
-// LIST views for one grid — a fresh grid 404s; treat that as "zero views."
+// LIST views for one grid — a fresh grid returns an empty page (older deployments 404'd; handle both).
 async function getGridViews(gridIdentifier: string, page = 0, size = 20): Promise<SavedView[]> {
   const baseUrl = getOneHealthBaseUrl()
   const params = new URLSearchParams({ gridIdentifier, page: String(page), size: String(size) })
@@ -83,7 +83,8 @@ function resolveGlobalViewFilters(configuration: GridConfiguration, viewerOrgId:
 ## Gotchas
 
 - `configuration` is an opaque string you JSON-stringify yourself — the platform doesn't validate its shape, so a malformed write only surfaces later when something tries to parse it back.
-- A grid with no saved views yet returns **404**, not an empty list.
+- A grid with no saved views yet returns an **empty page** (200, `totalElements: 0`) — but keep
+  handling a 404 as "zero views" too, because an earlier app observed that response.
 - One mapping table, both directions — translating UI-column-id ↔ platform-field-name ad hoc at each call site is how saved views quietly drift out of sync with the current grid.
 - Only the last-applied view **id** belongs in `localStorage`, purely as a UX pointer. If it points at a view someone else deleted, fall back to the normal view list instead of erroring.
 - Compare **visible** columns only when detecting duplicates — differences in hidden-column order/width shouldn't count.

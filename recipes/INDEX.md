@@ -20,7 +20,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [grid-list-views](grid-list-views.md) | Server-defined table/list views with paging (`/v3/health/grid/*`) |
 | [api-versions-and-layers](api-versions-and-layers.md) | Pick the right API layer: v1 basement, v2 wrappers, v3 wrappers/fresh |
 | [choose-a-read-path](choose-a-read-path.md) | Decide between `/query`, list-by-type, relationship reads, grids, GraphQL |
-| [sentinel-values-not-null](sentinel-values-not-null.md) | Unset fields come back as `"n/a"`, not `null` — normalize once |
+| [sentinel-values-not-null](sentinel-values-not-null.md) | Decode values once: `"n/a"` / `-1` for unset, `"true_"`/`"false_"` booleans |
 
 ## Reading data
 | Recipe | For |
@@ -129,6 +129,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 |---|---|
 | [public-reference-api-proxy](public-reference-api-proxy.md) | Server CORS proxy for a public reference API (NPI/ICD-10/…) |
 | [cache-reference-data-in-custom-data](cache-reference-data-in-custom-data.md) | Cache external reference data into customData |
+| [external-systems-and-id-mapping](external-systems-and-id-mapping.md) | Map a record to its id in an outside system (EHR MRN, member id, …) |
 | [deidentify-before-external-ai](deidentify-before-external-ai.md) | De-identification gate before any external AI call |
 | [external-job-pipeline](external-job-pipeline.md) | External job: idempotent submit + poll + persist-before-expiry |
 | [client-side-pdf-authoring](client-side-pdf-authoring.md) | Normalize intake into one PDF in the browser |

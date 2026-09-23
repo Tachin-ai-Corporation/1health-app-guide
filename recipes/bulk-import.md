@@ -18,11 +18,13 @@ shot (loading a patient list, a catalog, any admin-bulk-loaded data) instead of 
    carrying the file plus a JSON side-channel of extra options. It returns immediately with a log
    id — the import itself runs in the background.
 4. Poll the import log grid (`POST /api/v3/health/grid/data-import-log`), filtered to that log id,
-   until the row's own outcome is terminal. A 200 from the start call only means "the job was
-   accepted," never "it succeeded."
-5. When a row shows partial failure, its per-record errors come back as a separate downloadable
-   file referenced from the log row — surface that as a download link rather than trying to parse
-   error detail out of the log row itself.
+   until the row's `status` is terminal — `SUCCESS`, `PARTIAL_SUCCESS`, or `FAILURE` (confirmed
+   against the demo environment). A 200 from the start call only means "the job was accepted," never
+   "it succeeded." Each row also carries `numberOfSuccessfulRecords`, `numberOfFailedRecords`, and
+   `importExportTemplateDefinitionName` (which import type ran).
+5. When a row shows failures, its per-record errors come back as a separate file referenced by the
+   row's `errorFileId` / `errorFileName` — offer it as a download (see [attachments.md](attachments.md))
+   rather than trying to parse error detail out of the log row itself.
 6. If you're rendering a dashboard of every currently-running import instead of polling one job you
    started, remember the log is paginated: OR a "still running" check across every page you read on
    each refresh, and reset that check at the start of every fresh poll — a stale later page can
@@ -97,6 +99,8 @@ async function startLegacyImport(queryKey: string, file: File): Promise<number> 
 }
 
 // Poll the log for THIS job's own row until its outcome is terminal.
+const TERMINAL = new Set(["SUCCESS", "PARTIAL_SUCCESS", "FAILURE"])
+
 async function pollImportOutcome(logId: number, { intervalMs = 5000, maxAttempts = 60 } = {}) {
   const baseUrl = getOneHealthBaseUrl()
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -107,9 +111,9 @@ async function pollImportOutcome(logId: number, { intervalMs = 5000, maxAttempts
     })
     const { data } = await response.json()
     const row = data?.[0]
-    // The row's own status/outcome field names aren't published — confirm
-    // against a real response rather than hardcoding an enum here.
-    if (row && row.status !== "PENDING" && row.status !== "RUNNING") return row
+    // Terminal statuses confirmed on demo; the row also has numberOfSuccessfulRecords,
+    // numberOfFailedRecords, and errorFileId (the per-record error report) when anything failed.
+    if (row && TERMINAL.has(row.status)) return row
     await new Promise((resolve) => setTimeout(resolve, intervalMs))
   }
   throw new Error("Import polling timed out")

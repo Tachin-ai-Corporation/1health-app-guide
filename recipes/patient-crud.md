@@ -9,8 +9,8 @@ like contacts, addresses, aliases, external identifiers, and deceased status —
 
 > **During intake, check for an existing patient first.** Run the scored find
 > ([patient-find.md](patient-find.md)) before creating — only call the v3 create below when
-> there's no acceptable match, and confirm the new patient is attached to your organization
-> afterward ([deferred-record-creation.md](deferred-record-creation.md) — check + fallback).
+> there's no acceptable match. The v3 create attaches the patient to your organization
+> ([deferred-record-creation.md](deferred-record-creation.md) covers the upsert alternative).
 
 ## Pattern
 

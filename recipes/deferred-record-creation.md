@@ -13,13 +13,12 @@ avoid creating throwaway or duplicate patient records for every abandoned draft.
    component state) — never create a platform Person "just in case." Only write to the platform the
    moment a human action makes the record real (an order submission, a signed intake) — the point
    past which the draft can no longer just be discarded.
-2. **Create the patient at commit with the v3 patient create — then confirm it's attached to your
-   organization.** Run a scored find first ([patient-find.md](patient-find.md)), create with
-   `POST /api/v3/patient`, and immediately do one org-scoped read of the new patient. A person that
-   isn't attached to your organization is invisible to the rest of the platform (workflow steps that
-   bind to a patient, medical-record reads), so this check is not optional bookkeeping. If the
-   platform reports the person isn't a patient of your context organization, create through the
-   person upsert with its explicit org-attach flag instead (see Primary vs fallback).
+2. **Create the patient at commit with the v3 patient create.** Run a scored find first
+   ([patient-find.md](patient-find.md)), then `POST /api/v3/patient`. It attaches the new patient to
+   your (the caller's) context organization — confirmed against the demo environment: a v3-created
+   patient passes org-scoped reads, while a person created *without* an org attachment fails them with
+   "… is not patient of context organization". That attachment is what makes the record visible to the
+   rest of the platform (workflow steps that bind to a patient, org-scoped patient reads).
 3. **On the upsert fallback, never send the fields that let it match an existing person** (typically email/phone)
    unless you have positively confirmed identity. Upsert's whole point is idempotent
    "create-or-find," and its match keys are documented — sending them on every intake would
@@ -43,12 +42,12 @@ avoid creating throwaway or duplicate patient records for every abandoned draft.
 
 ## Primary vs fallback
 
-- **Primary — `POST /api/v3/patient`:** the current create-a-patient API (a scored find first, an
-  org-attachment check right after).
-- **Fallback — `POST /api/v2/person/upsert` with `markAsPatientToContextOrganization: true`:** switch
-  when the new patient isn't visible in your organization's context — the check, or the next step,
-  returns "… is not patient of context organization" or "Person with id: N not found" — or when you
-  specifically want upsert's create-or-find behavior.
+- **Primary — `POST /api/v3/patient`:** the current create-a-patient API; attaches the patient to the
+  caller's organization. Run a scored find first.
+- **Fallback — `POST /api/v2/person/upsert` with `markAsPatientToContextOrganization: true`:** when
+  you specifically want upsert's create-or-find behavior, or you're creating a Person that the v3
+  patient DTO doesn't cover. **The flag is mandatory here** — confirmed against demo: an upsert
+  without it creates a person that org-scoped reads reject ("… is not patient of context organization").
 
 ## Minimal example
 
@@ -60,11 +59,11 @@ import { callApi } from "@/lib/api"
 export async function createPatientAtCommit(input: { firstName: string; lastName: string; dob: string }) {
   return callApi<{ id: number }>("patient/create", "/api/v3/patient", {
     method: "POST",
-    body: JSON.stringify(input), // dob is YYYY-MM-DD; then confirm org attachment before continuing
+    body: JSON.stringify(input), // dob is YYYY-MM-DD; attaches the patient to the caller's organization
   })
 }
 
-// FALLBACK — when the created patient isn't attached to your organization.
+// FALLBACK — upsert's create-or-find. The org-attach flag below is mandatory.
 export async function createPersonAtCommit(input: { firstName: string; lastName: string; birthDate: string }) {
   return callApi<{ id: number }>("person/upsert", "/api/v2/person/upsert", {
     method: "POST",
@@ -91,16 +90,17 @@ export async function attachRecord(personId: number, input: { name: string; file
   })
 }
 
-// If a later step 400s with "Person with id: N not found" or "... is not patient of context
-// organization", the person isn't attached to your organization — use the upsert fallback.
+// "Person with id: N not found" / "... is not patient of context organization" on a later step
+// means the person isn't attached to your organization — on the upsert path, the flag was missing.
 ```
 
 ## Gotchas
 
-- **Confirm the new patient is attached to your organization.** An example app found that a
-  `POST /v3/patient` create could leave the person unattached, so every workflow step or
-  medical-record read expecting a patient of the *context organization* 400'd. Check right after
-  create; if it isn't attached, use the upsert fallback with its explicit org-attach flag.
+- **An unattached person is invisible to your organization.** Workflow steps and org-scoped reads
+  400 with "… is not patient of context organization" for a person that isn't attached. `POST
+  /v3/patient` attaches automatically (confirmed on demo; an earlier example app saw otherwise, so if
+  you create under a different identity than the one that later reads, verify once); on the upsert
+  path you must send the org-attach flag.
 - **Sending email or phone on upsert lets the platform match an existing person** — omit them
   unless you've verified exactly what triggers a match on your tenant; a merged chart is a much
   worse failure than a duplicate one.

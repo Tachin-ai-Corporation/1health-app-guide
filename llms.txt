@@ -4,7 +4,7 @@
 > front-end prototype into a working, 1health-compliant application.
 > **1health is the ONLY backend.** Read "Start here" before writing any code.
 
-- guide_version: 0.3 (draft — setup + a ~120-recipe library across 13 categories; key behaviors confirmed against the demo environment)
+- guide_version: 0.3.1 (draft — setup + a ~120-recipe library across 13 categories; key behaviors confirmed against the demo environment)
 - raw_base: https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/
 - repo: https://github.com/Tachin-ai-Corporation/1health-app-guide  (clone this for local grep)
 - api_docs (tactical, live, maintained by 1health): https://agents.1health.io/public/prod/llms.txt
@@ -77,7 +77,7 @@ Foundations (read these first):
 - [recipes/grid-list-views.md](recipes/grid-list-views.md) — server-defined list views (`/v3/health/grid/*`).
 - [recipes/api-versions-and-layers.md](recipes/api-versions-and-layers.md) — v1 basement, v2 standard wrappers, v3 wrappers or fresh APIs.
 - [recipes/choose-a-read-path.md](recipes/choose-a-read-path.md) — which read mechanism fits which job.
-- [recipes/sentinel-values-not-null.md](recipes/sentinel-values-not-null.md) — unset fields come back as `"n/a"`, not `null`.
+- [recipes/sentinel-values-not-null.md](recipes/sentinel-values-not-null.md) — unset values are `"n/a"` / `-1`, not `null`; `/query` booleans are `"true_"`/`"false_"`.
 
 Index categories: reading · writing/extending · workflows (journeys/steps/campaigns) · files & comments ·
 sharing & partners · org/tenant onboarding · patients, orders & clinical records · external integrations ·

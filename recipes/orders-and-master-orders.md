@@ -33,8 +33,8 @@ read one back, or track a physical kit's fulfillment.
    assume one supersedes another.
 6. During intake, resolve the patient before creating the order: run the scored find
    ([patient-find.md](patient-find.md)) first, and only create a new patient via v3
-   ([patient-crud.md](patient-crud.md)) when there's no acceptable match — confirming it's attached
-   to your organization before ordering against it ([deferred-record-creation.md](deferred-record-creation.md)).
+   ([patient-crud.md](patient-crud.md)) when there's no acceptable match — the v3 create attaches the
+   patient to your organization, so it's immediately orderable ([deferred-record-creation.md](deferred-record-creation.md)).
 7. Track a physical kit's fulfillment as its own sub-lifecycle: assigning an outbound
    carrier/tracking is one event, logging a return/inbound tracking code is another — not a single
    "shipped" boolean. Read a kit's shipment history by test-product code + kit key, not the kit's

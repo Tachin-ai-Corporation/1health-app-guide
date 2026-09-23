@@ -37,7 +37,9 @@ template baseline
   "records already linked to this one" list or picker. Its `filterBy` is equality-only (a plain
   key→value map, not RSQL), and `includeRelAttributes` optionally attaches the edge's own attributes
   to each row — drop back to the primary path the moment you need `contains`/range/"one of"
-  filtering on the target.
+  filtering on the target. Confirmed against the demo environment: rows carry `attributes` +
+  `relAttributes`, `searchText` matches on the target's name, `filterBy: { lastName: "…" }` does an
+  exact match, and `orderBy: { id: "DESC" }` is accepted.
 
 ## Minimal example
 
