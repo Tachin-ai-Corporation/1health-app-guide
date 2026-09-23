@@ -4,7 +4,7 @@
 > front-end prototype into a working, 1health-compliant application.
 > **1health is the ONLY backend.** Read "Start here" before writing any code.
 
-- guide_version: 0.3.1 (draft — setup + a ~120-recipe library across 13 categories; key behaviors confirmed against the demo environment)
+- guide_version: 0.4.0 (draft — setup + a ~120-recipe library across 13 categories + a QA standard; key behaviors confirmed against the demo environment)
 - raw_base: https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/
 - repo: https://github.com/Tachin-ai-Corporation/1health-app-guide  (clone this for local grep)
 - api_docs (tactical, live, maintained by 1health): https://agents.1health.io/public/prod/llms.txt
@@ -16,11 +16,15 @@ You were handed this URL to build a real application on **1health**. Do this now
    (c) **the user's own 1health app credentials** in **server** env — `APP_ID_DEMO` and
    `ONEHEALTH_SECRET_KEY_DEMO` (the app's decrypt key). The user registers their **own** 1health app
    and provisions these themselves; they are never shipped with this guide and never touch the browser.
-2. **Read these four, in order** (each is short):
+   **For QA**, also ask for (d): API keys for a System Admin, a Manager, and an Employee user in a
+   demo **QA org**, which the user puts in `.env.local` themselves. These keys are for local and
+   dev/stage builds only, never production.
+2. **Read these five, in order** (each is short):
    - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/rules-of-the-road.md
    - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/auth-and-launch.md
    - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/scaffold.md
    - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/prototype-to-app.md
+   - https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/setup/qa-and-local-testing.md
 
    (Faster if your tools allow it: `git clone https://github.com/Tachin-ai-Corporation/1health-app-guide` and read/grep it locally.)
 3. **Build the app, screen by screen.** For each feature, find its recipe in
@@ -37,6 +41,10 @@ You were handed this URL to build a real application on **1health**. Do this now
   ships no credentials; every customer uses their own app.** If the user hasn't registered one yet,
   they do that first — see [setup/auth-and-launch.md](setup/auth-and-launch.md) § "Provision your own app".
 - **A 1health demo login** — the user's own account to authenticate as in the demo environment.
+- **QA keys (for testing).** The user creates a demo QA org with one user per role (System Admin,
+  Manager, Employee) and an API key for each, and puts the keys in `.env.local`. With them, a local
+  or dev/stage build can sign in as each role. They are **never** set on the production deployment.
+  See [setup/qa-and-local-testing.md](setup/qa-and-local-testing.md).
 
 Your job: wire that prototype to 1health, following the rules below. Add no other backend.
 
@@ -46,6 +54,7 @@ Your job: wire that prototype to 1health, following the rules below. Add no othe
    the secret key and exchanges it for OAuth tokens. *Every other API call is client-side.*
 3. **All client calls go through `authFetch`** (Bearer token + automatic refresh) — never raw `fetch`.
 4. **Secrets stay server-side.** `ONEHEALTH_SECRET_KEY_*` live in env vars, never shipped to the browser.
+   QA keys (`ONEHEALTH_QA_KEY_*`) live only in `.env.local` or on a dev/stage deployment, never on production.
 5. **App-specific data lives in `customData`**, namespaced under `appData.<appId>`.
 
 ## How to use this guide
@@ -66,6 +75,7 @@ Your job: wire that prototype to 1health, following the rules below. Add no othe
 - [setup/prototype-to-app.md](setup/prototype-to-app.md) — the playbook: prototype screens → 1health features.
 - [setup/conventions.md](setup/conventions.md) — the house rules: server routes, comms, SWR, customData, identity.
 - [setup/anti-patterns.md](setup/anti-patterns.md) — what NOT to do (non-1health datastores, hardcoded ids, …).
+- [setup/qa-and-local-testing.md](setup/qa-and-local-testing.md) — sign a local or dev/stage build in as each role; the QA standard and checklist.
 
 ## Recipes — the HOW (abstract, reusable patterns)
 - [recipes/INDEX.md](recipes/INDEX.md) — the full, scannable index (~120 recipes, 13 categories). **Navigate from here.**
@@ -94,3 +104,6 @@ are advanced/guardrailed — read [setup/conventions.md](setup/conventions.md) f
 - No hardcoded step-field GUIDs (resolve by `label`). `customData` namespaced under `appData.<appId>`.
 - Any ⚠-bannered (supported-but-undocumented) route you use has been exercised against demo.
 - Runs against the DEMO environment with the provided credentials.
+- Passes the QA checklist as **System Admin, Manager, and Employee** against demo
+  ([setup/qa-and-local-testing.md](setup/qa-and-local-testing.md)).
+- No QA key is set on the production deployment.

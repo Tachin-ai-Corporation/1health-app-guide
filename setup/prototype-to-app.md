@@ -30,9 +30,13 @@ When in doubt: **filterable/sortable → schema attribute; everything else → c
 
 ## Phase C — Stand up auth
 
-Get the template launching against demo with your credentials before wiring any screen. If auth
-works, the base URL and token cookies are set and every recipe "just works."
-→ [auth-and-launch.md](auth-and-launch.md), [scaffold.md](scaffold.md)
+Get the template signing in against demo before wiring any screen. Locally, that means using the
+QA sign-in branch:
+1. The user sets up a demo QA org with one key per role.
+2. You click **Sign in as System Admin (QA)** on `/auth`.
+
+If auth works, the base URL and token cookies are set and every recipe "just works."
+→ [auth-and-launch.md](auth-and-launch.md), [scaffold.md](scaffold.md), [qa-and-local-testing.md](qa-and-local-testing.md)
 
 ## Phase D — Replace mock data, screen by screen
 
@@ -60,13 +64,23 @@ So the app works on a fresh tenant, have it **find-or-clone** its workflow templ
 activate its campaign by name on first run, instead of assuming they exist.
 → *Recipe: provisioning* (Phase 3).
 
-## Phase G — Validate against the definition of done
+## Phase G — QA as every role
+
+Run the QA checklist as **System Admin, Manager, and Employee**:
+1. Write the role matrix first.
+2. Test both the allowed and the denied cells.
+
+A pass as admin alone hides every permission bug. → [qa-and-local-testing.md](qa-and-local-testing.md)
+
+## Phase H — Validate against the definition of done
 
 - [ ] No backend but 1health; only `/api/token` is server-side.
 - [ ] Every read/write goes through `authFetch` (no raw `fetch`, base URL resolved per call).
 - [ ] No hardcoded step-field GUIDs (resolved by `label`).
 - [ ] App data namespaced under `appData.<appId>`; nested writes use the safe merge.
 - [ ] Runs end-to-end on demo with the provided credentials.
+- [ ] Passes the QA checklist as System Admin, Manager, and Employee on demo.
+- [ ] No QA key on the production deployment; the QA branch is off there.
 
 ## Anti-patterns (stop if you catch yourself doing these)
 
@@ -75,3 +89,5 @@ activate its campaign by name on first run, instead of assuming they exist.
   proxies aside.
 - Hardcoding ids/GUIDs that differ across environments.
 - Deep-merging into `customData` with a raw APPEND (it shallow-replaces the subtree).
+- A sign-in shortcut that skips the launch exchange (a mock session, a pasted token), or testing
+  only as an admin.

@@ -43,6 +43,39 @@ Skipping the Bearer token / auto-refresh (e.g. posting to an automation webhook 
 works only by an unguessable URL and skips the platform's auth. Route every 1health call through
 `authFetch`/`callApi`. A genuine automation webhook is the rare, explicit exception — not a habit.
 
+## ⛔ A sign-in shortcut that skips the launch exchange
+Examples: a mock session, a hard-coded or pasted access token, a "skip auth" flag, or writing a
+token into cookies by hand so a local build "just works."
+
+**Why it's wrong:** you're testing a flow production never runs. It skips the decrypt, the code
+exchange, and the user's real permissions, and shortcuts like these tend to ship.
+
+**Instead:** add the QA sign-in branch to `/api/token`. It mints a real launch payload with a QA
+user's API key and runs the normal exchange. → [qa-and-local-testing.md](qa-and-local-testing.md)
+
+## ⛔ QA only as an admin
+Testing every screen with your own System Admin account.
+
+**Why it's wrong:** an admin is allowed nearly everything, so every permission bug stays hidden until
+a manager or an employee hits a `403` in production.
+
+**Instead:** run the QA checklist as all three roles (System Admin, Manager, Employee) from a demo
+QA org, testing the denied actions as well as the allowed ones.
+→ [qa-and-local-testing.md](qa-and-local-testing.md)
+
+## ⛔ QA keys on the production deployment (or in the repo)
+This covers three mistakes:
+- setting `ONEHEALTH_QA_KEY_*` in the production deployment's env settings;
+- committing them (`.env`, `.env.production`, an example file with real values);
+- exposing them as `NEXT_PUBLIC_*`.
+
+**Why it's wrong:** a QA key is a live credential for a QA user. On production, one misconfiguration
+could sign strangers in as that user. Committed, or in `NEXT_PUBLIC_*`, anyone can read it.
+
+**Instead:** keep QA keys in `.env.local`, or in a dev/stage deployment's settings only. The QA
+branch also refuses to run in production builds, as a backstop.
+→ [qa-and-local-testing.md](qa-and-local-testing.md)
+
 ## ⛔ A shared, instance-wide cancel token
 Wiring one cancellation token onto every request from a client instance — so cancelling it aborts
 every in-flight call sharing that instance at once — is legacy plumbing, not a real cancellation

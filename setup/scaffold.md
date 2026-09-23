@@ -52,11 +52,25 @@ APP_ID_PROD=...                      # your app's id in prod
 NEXT_PUBLIC_APP_ID=1                 # your appData.<appId> namespace key
 ```
 
+**QA keys are the exception to "your host's env settings".** They go in `.env.local`, or in a
+dev/stage deployment's settings, but never the production deployment's and never with a
+`NEXT_PUBLIC_` prefix. See [qa-and-local-testing.md](qa-and-local-testing.md).
+
+```bash
+# QA sign-in: .env.local, or a dev/stage deployment ONLY. Never production. Never committed.
+ONEHEALTH_QA_KEY_SYSADMIN=...        # API key of your demo QA org's System Admin user
+ONEHEALTH_QA_KEY_MANAGER=...         # API key of its Manager user
+ONEHEALTH_QA_KEY_EMPLOYEE=...        # API key of its Employee user
+# APP_STAGE=staging                  # deployed dev/stage builds only: turns QA sign-in on there
+```
+
 ## Bringing your prototype in
 
-1. **Clone the template** and get it launching (auth page → demo login with your credentials).
+1. **Clone the template** and get it signing in on demo. Locally, that means adding the QA sign-in
+   branch and signing in as each QA role ([qa-launch-with-api-key.md](../recipes/qa-launch-with-api-key.md)).
 2. **Drop the prototype's UI in** — components under `components/`, routes under `app/`. Keep the
-   template's `app/api/token`, `app/auth`, `lib/auth-client.ts`, and `lib/api/` intact.
+   template's `app/api/token`, `app/auth`, `lib/auth-client.ts`, and `lib/api/` intact. The QA
+   sign-in branch is an addition to those files, not a rewrite.
 3. **Delete the prototype's mock data layer.** Every place it read/wrote mock data becomes a call
    through `lib/api/*` (see the [Recipe Index](../recipes/INDEX.md)).
 4. **Fill `lib/api/config.ts`** with your app's real type names (`RECORD_TYPES`) and the few schema
@@ -72,3 +86,4 @@ Then work screen-by-screen using [prototype-to-app.md](prototype-to-app.md).
 - Don't add a database, Prisma/Drizzle, Supabase, or any non-1health data store.
 - Don't add auth libraries (NextAuth, Clerk, …) — auth is the LPL flow, already built.
 - Don't call the API with raw `fetch`, and don't cache the base URL.
+- Don't put QA keys on the production deployment, in the repo, or in `NEXT_PUBLIC_*`.

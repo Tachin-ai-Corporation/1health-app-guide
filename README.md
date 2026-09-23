@@ -21,7 +21,7 @@ Or `git clone` this repo so the LLM can grep the whole tree locally (the recomme
 
 | Layer | Folder | What it is |
 |---|---|---|
-| **Setup** (the *what*) | [`setup/`](setup/) | The rules, the launch/auth flow, scaffolding, and the prototype→app playbook. |
+| **Setup** (the *what*) | [`setup/`](setup/) | The rules, the launch/auth flow, scaffolding, the prototype→app playbook, and QA as each role. |
 | **Recipes** (the *how*) | [`recipes/`](recipes/) | Abstract, reusable patterns. Start at [`recipes/INDEX.md`](recipes/INDEX.md). |
 | **API** (the *tactical*) | [`api/`](api/) | A bridge to the live per-route docs at `agents.1health.io` (not duplicated here). |
 

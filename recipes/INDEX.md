@@ -174,11 +174,12 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [capability-probe](capability-probe.md) · **adv** | Re-runnable probe of what your token may do |
 
 ## Auth & session
-(Core auth flow is in [setup/auth-and-launch.md](../setup/auth-and-launch.md).)
+(Core auth flow is in [setup/auth-and-launch.md](../setup/auth-and-launch.md); testing as each role is in [setup/qa-and-local-testing.md](../setup/qa-and-local-testing.md).)
 | Recipe | For |
 |---|---|
 | [resilient-api-client](resilient-api-client.md) | Harden the client: single-flight refresh, a bare client for public calls |
 | [enrich-session-in-token-route](enrich-session-in-token-route.md) | Seed session ids inside the token route (avoid a 2nd route) |
+| [qa-launch-with-api-key](qa-launch-with-api-key.md) | Sign a local or dev/stage build in as each QA role (never production) |
 | [survive-an-auth-redirect](survive-an-auth-redirect.md) | Keep your params intact across a hosted-login redirect |
 | [iframe-embedding-cookies](iframe-embedding-cookies.md) | Cookies that survive a cross-site iframe (CHIPS) |
 | [server-side-signout](server-side-signout.md) · **adv** | Complete server-side sign-out |
@@ -188,4 +189,4 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 ---
 **Don't do these:** see [setup/anti-patterns.md](../setup/anti-patterns.md) (non-1health datastores,
 localStorage-as-datastore, third-party mailers by default, hardcoded env ids, skipping `authFetch`,
-async bulk-export jobs, PHI in URLs or logs).
+async bulk-export jobs, PHI in URLs or logs, sign-in shortcuts, admin-only QA, QA keys in production).

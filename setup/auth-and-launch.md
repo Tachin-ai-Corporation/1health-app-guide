@@ -58,7 +58,8 @@ Two environments, each with its own secret key and base URL:
 
 The environment is auto-detected from `document.referrer` (a `demo.1health` referrer → demo, an
 `app.1health` referrer → prod), otherwise the user picks. It is persisted in a cookie and passed
-to `/api/token`. **You'll normally build and test against demo** with your own demo login and your own app's demo credentials.
+to `/api/token`. **You'll normally build and test against demo** with your own demo login and your own app's demo credentials,
+plus, for QA, the role keys of a demo QA org (see below).
 
 ## The one server route: `/api/token`
 
@@ -74,6 +75,20 @@ to `/api/token`. **You'll normally build and test against demo** with your own d
 You get this route working out of the box from the app template — copy it as-is. Reference:
 [`app/api/token/route.tsx`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/app/api/token/route.tsx).
 **Do not** reimplement the crypto by hand; the derivation must byte-match the platform's.
+
+## Local and dev/stage builds: sign in as a QA role
+
+The portal launches your app only at its registered launch URL. It can't launch a build on
+`localhost` or any other build that isn't at that URL. For those builds, add a **QA branch** to
+`/api/token`:
+- it asks 1health for the same launch payload the portal would have sent, minted with the API key
+  of a QA user in your demo QA org (one key per role: System Admin, Manager, Employee);
+- it then runs the exchange above, unchanged.
+
+The exchange is server-to-server, so this works from `localhost`. The keys stay on the server and
+never go on the production deployment, and the branch is off in production builds.
+→ [qa-and-local-testing.md](qa-and-local-testing.md) (the QA standard and checklist),
+[recipes/qa-launch-with-api-key.md](../recipes/qa-launch-with-api-key.md) (the code)
 
 ## Cookies the flow sets
 
@@ -128,6 +143,8 @@ The refresh above is **proactive** (it checks expiry before sending). Harden it 
 
 - **Never** call a 1health endpoint with raw `fetch` — you'll skip auth and refresh. Use `authFetch`.
 - **Never** put `ONEHEALTH_SECRET_KEY_*` in client code or `NEXT_PUBLIC_*`. Server env only.
+- **Never** set `ONEHEALTH_QA_KEY_*` on the production deployment, commit them, or expose them as
+  `NEXT_PUBLIC_*`. QA keys belong only in `.env.local` and on dev/stage deployments.
 - **Resolve the base URL per call** (`getOneHealthBaseUrl()`); it changes with the environment.
 - Token refresh is direct browser → `POST {baseUrl}/auth/oauth2/token`
   (`grant_type=refresh_token`, `client_id=public-client`) — already handled for you.
