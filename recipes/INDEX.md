@@ -31,7 +31,6 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [bulk-read-and-export](bulk-read-and-export.md) | Export / bulk-read: a `/query` offset loop + client-side filtering |
 | [batched-enrichment](batched-enrichment.md) | Batch-enrich rows by id (`id==a,id==b,…`) for a field a list omits |
 | [enrich-grid-with-custom-data](enrich-grid-with-custom-data.md) | Join a grid page with bulk customData by id |
-| [cohort-definitions](cohort-definitions.md) · **adv** | Define, evaluate, and snapshot a cohort (reusable filter trees) |
 
 ## Writing & extending data
 | Recipe | For |
@@ -124,6 +123,14 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [test-catalog-modeling](test-catalog-modeling.md) | A test's clinical definition vs its orderable product listing |
 | [results-ingestion](results-ingestion.md) | Submit a test result, structured or as a file |
 | [platform-generated-documents](platform-generated-documents.md) | Let 1health generate requisitions/result PDFs instead of compositing |
+
+## Population health: cohorts & care gaps (the command center)
+| Recipe | For |
+|---|---|
+| [cohort-definitions](cohort-definitions.md) | **Start here.** Model, entitlement, lifecycle (Draft → Initializing → Active → Disabled), preview vs counts |
+| [cohort-filter-conditions](cohort-filter-conditions.md) | The filter catalog, exact operator strings, value encoding by type, read-back, templates |
+| [cohort-snapshots-and-history](cohort-snapshots-and-history.md) | Active cohorts: latest counts & members, snapshot history, change over time |
+| [cohort-campaigns](cohort-campaigns.md) | Launch a campaign from a cohort (vendor, coverage) and sync additions/removals |
 
 ## External integrations (done right)
 | Recipe | For |

@@ -4,7 +4,7 @@
 > front-end prototype into a working, 1health-compliant application.
 > **1health is the ONLY backend.** Read "Start here" before writing any code.
 
-- guide_version: 0.4.1 (draft — setup + a ~120-recipe library across 13 categories + a QA standard; key behaviors confirmed against the demo environment)
+- guide_version: 0.5.0 (draft — setup + a ~125-recipe library across 14 categories + a QA standard; key behaviors confirmed against the demo environment)
 - raw_base: https://raw.githubusercontent.com/Tachin-ai-Corporation/1health-app-guide/main/
 - repo: https://github.com/Tachin-ai-Corporation/1health-app-guide  (clone this for local grep)
 - api_docs (tactical, live, maintained by 1health): https://agents.1health.io/public/prod/llms.txt
@@ -78,7 +78,7 @@ Your job: wire that prototype to 1health, following the rules below. Add no othe
 - [setup/qa-and-local-testing.md](setup/qa-and-local-testing.md) — sign a local or dev/stage build in as each role; the QA standard and checklist.
 
 ## Recipes — the HOW (abstract, reusable patterns)
-- [recipes/INDEX.md](recipes/INDEX.md) — the full, scannable index (~120 recipes, 13 categories). **Navigate from here.**
+- [recipes/INDEX.md](recipes/INDEX.md) — the full, scannable index (~125 recipes, 14 categories). **Navigate from here.**
 
 Foundations (read these first):
 - [recipes/query-the-data-graph.md](recipes/query-the-data-graph.md) — read entities + relationships (`/api/v2/query`).
@@ -90,7 +90,8 @@ Foundations (read these first):
 - [recipes/sentinel-values-not-null.md](recipes/sentinel-values-not-null.md) — unset values are `"n/a"` / `-1`, not `null`; `/query` booleans are `"true_"`/`"false_"`.
 
 Index categories: reading · writing/extending · workflows (journeys/steps/campaigns) · files & comments ·
-sharing & partners · org/tenant onboarding · patients, orders & clinical records · external integrations ·
+sharing & partners · org/tenant onboarding · patients, orders & clinical records ·
+population health (cohorts & care gaps — the command center) · external integrations ·
 communications · agreements/BAA · app architecture & security · auth & session. Recipes marked **adv**
 are advanced/guardrailed — read [setup/conventions.md](setup/conventions.md) first.
 

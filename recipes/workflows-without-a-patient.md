@@ -41,7 +41,8 @@ You get "who ran it" without casting anyone as a patient.
   comments, and assignment all work unchanged.
 - **Add a patient step only when the process is about a patient**, such as an intake, a care
   episode, or an outreach program. Then audiences, patient counts, and `allowMultiplePatientJourneys`
-  do their normal jobs.
+  do their normal jobs. For population outreach, launch the campaign from a cohort, which creates
+  one journey per member ([cohort-campaigns.md](cohort-campaigns.md)).
 - **Fallback: `customData` state**, only when the process can't be a workflow at all
   ([custom-data-as-state-machine.md](custom-data-as-state-machine.md)).
 

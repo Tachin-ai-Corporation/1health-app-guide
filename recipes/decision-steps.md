@@ -70,3 +70,6 @@ const decisions = await (await authFetch(`${baseUrl}/api/v2/health/workflow-temp
   the palette query.
 - [workflows-journeys-steps.md](workflows-journeys-steps.md) — how an unresolved decision shows up
   on the running-journey side (the step count is unknown until a submit resolves the branch).
+- [cohort-filter-conditions.md](cohort-filter-conditions.md) — a decision's conditions are stored
+  as the same `DataFilterCondition` records the cohort builder uses. Its catalog and value encoding
+  may help you read a decision's `conditions`, but check a live decision before reusing them.

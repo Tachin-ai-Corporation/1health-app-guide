@@ -12,14 +12,17 @@ secure-share, pcp-tcm (see [provision-templates-and-campaigns.md](provision-temp
 ## Pattern
 
 1. **Know the state machine.** A campaign moves Prepared → Initializing → In Progress → Finished,
-   with Cancelled and Interrupted reachable as side-exits from the active states. Don't model it as
-   a bare "created vs activated" boolean.
+   with Canceled and Interrupted reachable as side-exits from the active states. It shows Updating
+   while a change is being applied, such as a cohort's additions or removals. Don't model it as a
+   bare "created vs activated" boolean. Compare the exact status strings: the canceled status is
+   `Canceled`, with one L (verified on demo).
 2. **Define the audience declaratively, not as an id list.** A campaign is created with a set of
    label-tag ids (`labelTagIds`) — any record tagged with one of those tags is in scope. Tagging
    (or untagging) records is a separate, ordinary bulk operation you can do any time, before or
-   after the campaign exists (see [bulk-tagging.md](bulk-tagging.md)). A campaign can instead
-   target a saved, dynamic query — see [cohort-definitions.md](cohort-definitions.md) — rather than
-   a fixed tag set; the two are alternative audience mechanisms, not layers of one system. **An
+   after the campaign exists (see [bulk-tagging.md](bulk-tagging.md)). A campaign can instead be
+   launched from a saved, dynamic query (a cohort) rather than a fixed tag set, and then kept in
+   sync as the cohort's membership changes — see [cohort-campaigns.md](cohort-campaigns.md). The
+   two are alternative audience mechanisms, not layers of one system. **An
    audience is optional.** A campaign whose journeys your app starts on demand (one per file or
    per export) needs none, and no patient has to be involved at all; see
    [workflows-without-a-patient.md](workflows-without-a-patient.md).
@@ -91,8 +94,9 @@ await authFetch(`${baseUrl}/api/v2/health/workflow-campaign/${campaignId}/use-la
   first-activating the campaign this recipe then runs through its lifecycle.
 - [template-versions-draft-publish.md](template-versions-draft-publish.md) — the template version
   `use-latest-template` re-points a campaign at.
-- [cohort-definitions.md](cohort-definitions.md) — the dynamic-query alternative to a fixed
-  label-tag audience.
+- [cohort-campaigns.md](cohort-campaigns.md) — the cohort-driven alternative to a fixed label-tag
+  audience (launch, then sync additions/removals); [cohort-definitions.md](cohort-definitions.md)
+  for the cohort itself.
 - [bulk-tagging.md](bulk-tagging.md) — tagging/untagging the records a tag-based audience matches.
 - [workflows-without-a-patient.md](workflows-without-a-patient.md) — a campaign with no audience at
   all, for a process that has no patient.
