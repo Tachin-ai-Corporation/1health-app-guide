@@ -15,9 +15,11 @@ membership changes.
 **Reference code:** none public. See the Minimal example.
 
 **Seen in:** 1health platform usage. The shapes come from the published docs and 1health's own
-command center. Only the "no campaign yet" placeholder was verified on demo:
-- launching wasn't exercised, because it enrolls real members, demo included;
-- `campaign-coverage` wasn't exercised, because it needs a vendor and the demo QA org has none.
+command center. On demo:
+- the "no campaign yet" placeholder was verified;
+- a launch without a vendor was attempted and returned `500`;
+- the successful launch path and the membership sync weren't exercised, because the demo QA org
+  has no vendor to launch with.
 
 ## Pattern
 
@@ -36,22 +38,28 @@ command center. Only the "no campaign yet" placeholder was verified on demo:
 
    This is the patient case: each member becomes the patient of one journey. For processes that
    aren't about a patient, see [workflows-without-a-patient.md](workflows-without-a-patient.md).
-3. **Optionally assign a vendor, the partner who works the campaign.** The pickers cascade through
-   GraphQL, each supporting `searchText` and nested paging:
+3. **Assign a vendor, the partner who works the campaign. In practice this is required.** The
+   published docs mark `vendor` as optional, but a launch without it returns `500`, a null-vendor
+   server error (verified on demo). 1health's own launch form also requires a vendor, a service,
+   and at least one measure. So before an org can launch from a cohort, it must be a **client of a
+   vendor org** that provides a **vendor service** covering **quality measures**; set that up in
+   the 1health portal first. The pickers cascade through GraphQL, each supporting `searchText` and
+   nested paging:
    - **vendor:** the orgs your org is a client of (`OrganizationIsAClientOfOrganization`);
    - **service:** that vendor's services (`OrganizationProvidesVendorService`);
    - **measures:** one or more quality measures that service covers
      (`VendorServiceProvidesVendorCoverage` → `VendorCoverageHasPrimaryQualityMeasure`).
 
-   If you send `vendor`, all three of its fields are required:
-   `{ id, serviceId, qualityMeasureIds }`.
+   All three of `vendor`'s fields are required: `{ id, serviceId, qualityMeasureIds }`. If the
+   vendor picker comes back empty, show "no vendors are set up for your organization", not a
+   launch button that will fail.
 4. **Preview the vendor's reach before launching.** Call
    `POST …/campaign-coverage { vendor: { id, serviceId, qualityMeasureIds } }`. It returns
    `{ coveredPatients }`: the cohort members inside the vendor's coverage area, which is defined by
    state and ZIP code. Re-check it about 500 ms after the selections stop changing, and show it as
    a share of the cohort's member count.
 5. **Launch.** Call `POST …/launch-campaign?batchSize=` with
-   `{ name, description, workflowTemplateGroupId, vendor? }`. `name` must be 1–256 characters and
+   `{ name, description, workflowTemplateGroupId, vendor }`. `name` must be 1–256 characters and
    `description` 1–5000. It returns `{ id, name, message }`.
    - `batchSize` is the journey-creation chunk. It defaults to 2 and has the same trade-off as a
      campaign run: higher is faster, lower is more stable.
@@ -73,10 +81,13 @@ command center. Only the "no campaign yet" placeholder was verified on demo:
 ## Primary vs fallback
 
 - **Primary: a cohort-driven audience.** Use this when the target population can be expressed
-  with the filter catalog. Membership follows the data, and you reconcile it with `member-coverage`.
+  with the filter catalog and the org has a vendor to assign. Membership follows the data, and you
+  reconcile it with `member-coverage`.
 - **Fallback: a label-tag audience.** Use this when the audience is a hand-picked list the catalog
   can't express. You tag records and run an ordinary campaign
-  ([campaign-lifecycle-and-audience.md](campaign-lifecycle-and-audience.md)).
+  ([campaign-lifecycle-and-audience.md](campaign-lifecycle-and-audience.md)). It isn't a stand-in
+  for a cohort launch that's blocked by a missing vendor, though: tagging needs the member ids, and
+  the cohort APIs return only 50 at a time. Set up the vendor instead.
 - **Never mix them.** Don't hand-create journeys inside a cohort campaign. A journey you start
   manually for someone the cohort doesn't include counts as a **removal**; 1health's campaign screen
   warns about exactly this. To change who's in, change the cohort (a new definition) or use a
@@ -97,10 +108,11 @@ export async function vendorReach(cohortId: number, vendor: Vendor) {
   return res.data?.coveredPatients ?? 0
 }
 
-export async function launchFromCohort(cohortId: number, name: string, description: string, workflowTemplateGroupId: number, vendor?: Vendor) {
+// The vendor is required in practice: a launch without one returns 500 (verified on demo).
+export async function launchFromCohort(cohortId: number, name: string, description: string, workflowTemplateGroupId: number, vendor: Vendor) {
   return callApi<{ id: number; message: string }>("cohort/launch", `/api/v2/cohort-definition/${cohortId}/launch-campaign?batchSize=10`, {
     method: "POST",
-    body: JSON.stringify({ name, description, workflowTemplateGroupId, ...(vendor ? { vendor } : {}) }),
+    body: JSON.stringify({ name, description, workflowTemplateGroupId, vendor }),
   })
 }
 
@@ -123,8 +135,12 @@ export async function applyChanges(cohortId: number, campaignId: number, action:
 ## Gotchas
 
 - **Launching enrolls real members, on demo too.** Test with a deliberately narrow cohort.
-- **`vendor` is all-or-nothing.** If you send it at all, `id`, `serviceId`, and a non-empty
-  `qualityMeasureIds` are all required.
+- **`vendor` is required in practice, and it's all-or-nothing.** Omitting it returns `500`, despite
+  the docs. Sending it means sending `id`, `serviceId`, and a non-empty `qualityMeasureIds`. No
+  vendor partnership means no cohort launch, and there's no vendor-less path to a cohort-driven
+  campaign.
+- **Check that the org has vendors before offering a launch.** Query the org's client-of vendors
+  up front. On demo the QA org had none, so it couldn't launch at all.
 - **The `action` values are exact:** `create-journeys` and `cancel-journeys`.
 - **`member-coverage` returns counts, not lists.** There's no route that names which members are
   additions or removals.

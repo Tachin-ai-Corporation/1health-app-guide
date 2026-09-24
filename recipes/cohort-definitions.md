@@ -58,6 +58,10 @@ Your app reads the last two from `GET /api/v2/tenant` (`organization.type[]` and
 the cohort APIs answered a System Admin in an org without the capability. Authorization comes from
 the user's token, as everywhere else.
 
+Launching a campaign from a cohort has one more prerequisite: the org needs a **vendor**. It must be
+a client of a vendor org that has a service covering quality measures. Without one the launch
+fails ([cohort-campaigns.md](cohort-campaigns.md)).
+
 ## Pattern: the lifecycle
 
 1. **Load the filter catalog once.** Call `GET /api/v2/health/order/data-definition/list?workflowType=Cohort Definition`.
@@ -86,8 +90,8 @@ the user's token, as everywhere else.
 6. **Read an Active cohort from its latest snapshot** instead of re-evaluating it. While the first
    snapshot is still empty, fall back to `evaluate`
    → [cohort-snapshots-and-history.md](cohort-snapshots-and-history.md).
-7. **Act on the cohort:** launch one campaign from it, then keep the campaign in step as membership
-   changes → [cohort-campaigns.md](cohort-campaigns.md).
+7. **Act on the cohort:** launch one campaign from it (a vendor is required), then keep the campaign
+   in step as membership changes → [cohort-campaigns.md](cohort-campaigns.md).
 8. **Retire it** with `PUT …/{id}/disable`, which returns `200` with an empty body. A Disabled
    cohort and its snapshots stay readable. 1health's builder offers no way back, but the API has
    one: `PUT …/activate` on a Disabled cohort returns `200` and runs it through Initializing again
