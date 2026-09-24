@@ -15,14 +15,19 @@ membership changes.
 **Reference code:** none public. See the Minimal example.
 
 **Seen in:** 1health platform usage. The shapes come from the published docs and 1health's own
-command center. They weren't exercised live, because launching enrolls real members, demo included.
+command center. Only the "no campaign yet" placeholder was verified on demo:
+- launching wasn't exercised, because it enrolls real members, demo included;
+- `campaign-coverage` wasn't exercised, because it needs a vendor and the demo QA org has none.
 
 ## Pattern
 
 1. **An Active cohort launches one campaign.** The definition links to it through
    `CohortDefinitionInitiatesWorkflowCampaign`. The campaign's own detail carries
    `cohortDefinition: { id, name }`, so either side can find the other. Show the launch form only
-   when the cohort has no linked campaign; otherwise show the campaign.
+   when the cohort has no linked campaign; otherwise show the campaign. Before any launch,
+   `GET …/{id}/workflow-campaign` still returns `200`, with a placeholder object (`id: -1`,
+   `"n/a"` fields, a 1970 `createdOn`), not a 404. Treat `id <= 0` as "no campaign"
+   (verified on demo).
 2. **Pick a patient workflow.** Offer published campaign-type template groups. Call
    `POST /api/v3/health/grid/workflow-template-group` with these `filterBy` entries:
    - `{ key: "type", operator: "contains", value: "Campaign" }`

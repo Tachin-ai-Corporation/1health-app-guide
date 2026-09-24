@@ -13,24 +13,31 @@
 - `GET …/snapshot/{cohortSnapshotId}/export` → [agents.md](https://agents.1health.io/public/prod/api/v2/cohort-definition/_id_/snapshot/_cohortSnapshotId_/export/agents.md) (see the caveat below)
 
 **Reference code:** none public — see the Minimal example.
-**Seen in:** 1health platform usage. Shapes are from the published docs, cross-checked against how 1health's own command center reads them. Demo had no Active cohort to exercise these routes on, so confirm them on your first Active cohort.
+**Seen in:** 1health platform usage. Verified on demo with a throwaway 155-member cohort: the latest overview and members, the snapshot list, refresh, and reads while Disabled.
 
 ## Pattern
 
 1. **A snapshot is the platform's stored membership of an Active cohort at one point in time:**
    `{ id, created, status, errorMessage, memberCount, openCareGaps, targetedMembers, targetedOpenCareGaps }`.
-   The platform makes them. The first is built while the definition is **Initializing**, right
-   after activation.
+   The platform makes them in two cases:
+   - at activation, while the definition is **Initializing**;
+   - on a manual **refresh** (step 6).
+
+   On demo no other snapshots appeared within minutes. `status` was `Success` for a clean build,
+   and `targetedOpenCareGaps` is `-1` until a campaign exists.
 2. **Get current numbers from the latest snapshot:** `snapshot/latest/overview`.
    - The `targeted*` fields count the members and care gaps covered by the campaign launched from
      the cohort, for the measures that campaign targets ([cohort-campaigns.md](cohort-campaigns.md)).
    - Show them only for Active cohorts, as 1health's command center does: two tickers for a Draft,
      four for an Active cohort.
-   - While the first snapshot is still being built, the response has no `id`. Fall back to
-     `evaluate/overview` with the definition's `filterGroups` until it has one.
+   - Before the first snapshot exists, the call returns `200` with an **empty body**, not a 404
+     (verified on demo). While that's the case, fall back to `evaluate/overview` with the
+     definition's `filterGroups`.
 3. **Get a member sample from the latest snapshot:** `snapshot/latest/members` returns a Page of up
    to 50 members, `{ id, firstName, lastName, birthDate, created, updated, externalSystems[{ name, externalSystemId }] }`.
-   If it's empty (still building), fall back to `evaluate` with the same filters.
+   On demo it returned 50 rows for a 155-member cohort, labeled them `totalElements: 50, lastPage: true`,
+   and ignored `page` and `size`. It's a sample, exactly like `evaluate`. If it's empty (still
+   building), fall back to `evaluate` with the same filters.
 4. **Show history** from `snapshot/list?page=&size=&search=&status=`, which is paged (`page` 0,
    `size` 50 by default).
    - Ask for `status=Success` to list only usable snapshots. The product also shows
@@ -38,14 +45,19 @@
    - `errorMessage` says why a snapshot failed.
 5. **Compare two points in time:** pick a snapshot and diff its four counts against the latest
    (latest minus selected). Show the deltas with a sign.
-6. **Handle on-demand refresh cautiously.** `PUT …/{id}/refresh` is documented, but its effect isn't
-   described, and 1health's own command center doesn't call it. Try it on a demo cohort before you
-   offer a "refresh now" button.
+6. **Use refresh to take a snapshot now.** `PUT …/{id}/refresh` queues a manual rebuild of the
+   membership and returns `{ id, name, message }`, where the message acknowledges a
+   `MANUAL_COHORT_REFRESH`. On demo a new `Success` snapshot appeared within about 30 s, and the
+   cohort stayed Active throughout. It works only on **Active** cohorts: on a Disabled one it's a
+   `400` "…is not active". 1health's own command center doesn't offer this button, so it's yours
+   to add. Re-read `snapshot/latest/overview` after the new snapshot lands.
 
 ## Primary vs fallback: "everyone in the cohort"
 
 No endpoint returns the full member list page by page. `snapshot/latest/members` and `evaluate`
-both stop at 50 rows.
+both stop at 50 rows. The graph's `CohortDefinitionIncludesPerson` link isn't a way around this
+either: it stayed empty for an Active 155-member cohort, through both GraphQL and `/query`
+(verified), so membership isn't stored there.
 
 - **Primary: act through a campaign.** To do something for every member, launch a campaign from
   the cohort. The campaign gets one journey per member, and you page those journeys with the
@@ -106,7 +118,10 @@ export async function snapshotHistory(cohortId: number, latest: Snapshot, page =
   population is heavy, and the snapshot already holds the numbers.
 - **Unset values use sentinels:** counts can come back as `-1`, and names and birth dates as
   `"n/a"`. Normalize them once ([sentinel-values-not-null.md](sentinel-values-not-null.md)).
-- **Snapshot timestamps carry no timezone,** so treat them as UTC before formatting.
+- **Snapshot timestamps carry no timezone, and they're UTC** (verified against local time). Append
+  `Z` before you parse them.
+- **A Disabled cohort's snapshots stay readable,** including `latest/overview`, but a Disabled
+  cohort can't be refreshed.
 - **History and campaign features only make sense once the cohort is Active.** While it's
   Initializing, show "building" and let the user refresh.
 

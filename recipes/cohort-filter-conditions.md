@@ -63,17 +63,20 @@
    Race, Ethnicity, Biological Gender, Plan Type, Network Type, Region, and care-gap Status. Other
    `text` fields (Zipcode, Contract ID, Employer Group Number, …) are free entry.
 5. **Read a saved definition back through GraphQL**; there's no REST read. When decoding:
-   - `logicalOperator` and `comparisonOperator` (and a definition's `category`) come back as
-     **arrays**, so take `[0]`;
-   - `value` comes back as a **string**: JSON-parse arrays and `{ start, end }` ranges, and leave a
-     single number or date as it is;
+   - `state`, `logicalOperator`, and `comparisonOperator` (and a definition's `category`) come back
+     as **arrays**, so take `[0]`;
+   - `value` comes back as a **string**. For example, a date range is stored as
+     `{"start":"1980-01-01T00:00:00.000Z","end":"1980-01-07T00:00:00.000Z"}`. JSON-parse arrays and
+     `{ start, end }` ranges, and leave a single number or date as it is;
+   - a condition's `name` comes back as `"n/a"`, because nothing sends one;
    - map codes back to labels (state codes to names, evidence ids to names).
-6. **Treat templates as reusable groups.**
-   - **Save:** `POST /api/v2/filter-group/template` with the same group body.
+6. **Treat templates as reusable groups** (the round trip below was verified on demo).
+   - **Save:** `POST /api/v2/filter-group/template` with the same group body. The template is
+     created with `isPublic: true`, even if you don't send the field.
    - **List:** GraphQL `ConditionFilterGroup(filter: { isPublic: { equal: true }, searchText: … })`,
      paged with `{ limit, offset }`; `recordsCount` gives you the last page.
    - **Apply:** copy the template's conditions into a new group. It's a copy, not a link.
-   - **Delete:** `DELETE /api/v2/filter-group/template/{id}`.
+   - **Delete:** `DELETE /api/v2/filter-group/template/{id}`, which returns `200` with an empty body.
 
    Templates belong to the organization that saved them.
 

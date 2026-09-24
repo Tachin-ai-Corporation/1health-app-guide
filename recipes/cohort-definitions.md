@@ -18,7 +18,7 @@ This is the hub recipe; three companion recipes go deeper.
 - read one definition back: `POST /api/graphql` → [agents.md](https://agents.1health.io/public/prod/api/graphql/agents.md).
 
 **Reference code:** none public; see the Minimal example.
-**Seen in:** 1health platform usage (a manager-facing population-health feature); request shapes, AND/OR semantics and counting behavior verified on demo
+**Seen in:** 1health platform usage (a manager-facing population-health feature). Verified end to end on demo with a throwaway cohort: create, update, activate, snapshots, refresh, disable, and re-activate.
 
 ## What a cohort is
 
@@ -75,26 +75,30 @@ the user's token, as everywhere else.
    - `evaluate` returns a sample of up to 50 members.
 
    Neither call persists anything.
-4. **Save a Draft** with `POST /api/v2/cohort-definition`, which returns `{ id, name, state, message }`.
-   Save later edits with `PUT /api/v2/cohort-definition/{id}` and the same body. Only Drafts are
-   editable.
-5. **Activate** with `PUT …/{id}/activate`. The state goes to **Initializing** while the platform builds
-   the first snapshot, then to **Active**. Poll the state, or offer a refresh as 1health's builder
-   does; history and campaign features wait until the cohort is Active.
+4. **Save a Draft** with `POST /api/v2/cohort-definition`, which returns `{ id, name, state: "Draft", message }`.
+   Save later edits with `PUT /api/v2/cohort-definition/{id}` and the same full body. A PUT replaces
+   the whole tree. Only Drafts are editable.
+5. **Activate** with `PUT …/{id}/activate`, which returns `200` with an empty body. The state goes
+   straight to **Initializing** while the platform builds the first snapshot, then to **Active**.
+   On demo a 155-member cohort had its first snapshot within seconds and reached Active in about
+   34 s; larger populations take longer. Poll the state, or offer a refresh as 1health's builder
+   does. History and campaign features wait until the cohort is Active.
 6. **Read an Active cohort from its latest snapshot** instead of re-evaluating it. While the first
    snapshot is still empty, fall back to `evaluate`
    → [cohort-snapshots-and-history.md](cohort-snapshots-and-history.md).
 7. **Act on the cohort:** launch one campaign from it, then keep the campaign in step as membership
    changes → [cohort-campaigns.md](cohort-campaigns.md).
-8. **Retire it** with `PUT …/{id}/disable`. A Disabled cohort stays readable, and 1health's builder
-   offers no way back.
+8. **Retire it** with `PUT …/{id}/disable`, which returns `200` with an empty body. A Disabled
+   cohort and its snapshots stay readable. 1health's builder offers no way back, but the API has
+   one: `PUT …/activate` on a Disabled cohort returns `200` and runs it through Initializing again
+   (verified). Decide deliberately whether your app offers re-activation.
 
-| State | Edit (PUT) | Activate | Disable | Snapshots & campaign |
-|---|---|---|---|---|
-| Draft | ✅ | ✅ | — | — |
-| Initializing | — | — | — | wait (building) |
-| Active | — | — | ✅ | ✅ |
-| Disabled | — | — | — | read-only |
+| State | Edit (PUT) | Activate | Disable | Refresh | Snapshots & campaign |
+|---|---|---|---|---|---|
+| Draft | ✅ | ✅ | — | — | — |
+| Initializing | — | — | — | — | wait (building) |
+| Active | ❌ `400` | — | ✅ | ✅ | ✅ |
+| Disabled | — | ✅ (API only) | — | ❌ `400` | read-only |
 
 ## Primary vs fallback
 
@@ -106,11 +110,12 @@ the user's token, as everywhere else.
   with the nested group → condition → definition relations. There's no REST read of a definition.
   How to decode what comes back is in [cohort-filter-conditions.md](cohort-filter-conditions.md).
 - **Listing definitions.** The primary is **the grid**, `POST /api/v3/health/grid/cohort-definition?page=&size=`
-  with `{}` or `{ filterBy, orderBy }`. Each row carries the list columns: name, description, state,
-  member and care-gap totals, the launched campaign, creator, created and updated. 1health's list
-  reads them as `name, description, state, membersTotalCount, careGapsTotalCount, campaign,
-  createdByPersonName, created, updated`; check the keys against a live row. Fall back to GraphQL
-  only for fields the grid doesn't carry.
+  with `{}` or `{ filterBy, orderBy }`; for example `{ key: "id", operator: "equals", value }`
+  finds one row. Row keys (verified on demo): `id, name, description, state, membersTotalCount,
+  careGapsTotalCount, campaign, created, updated`, plus the creator as `createdByPersonId`,
+  `createdByPersonName`, `createdByPersonFirstName`, `createdByPersonLastName`, `createdByPersonEmail`,
+  `createdByPersonPhoneNumber`, `createdByPersonPhoneNumberRegion`, and `createdByPersonUserId`. A
+  Draft shows `-1` for both totals. Fall back to GraphQL only for fields the grid doesn't carry.
 
 ## Minimal example
 
@@ -157,8 +162,16 @@ export async function saveAndActivate(definition: CohortDefinitionBody) {
 - **Operators are exact strings from the catalog, and they're case-sensitive.** `"Is Any Of These"`
   works; `"is any of these"` is a `400` "Invalid comparison operator", and so is the grid's
   `greaterThan` dialect.
-- **Active and Disabled definitions are locked.** To change the logic of an Active cohort, create a
-  new Draft that copies its groups.
+- **The API enforces the lock, not just the UI.** A `PUT` on an Active definition returns `400`
+  "The Cohort Definition is in {Active} state and it can not be updated." (verified). To change the
+  logic of an Active cohort, create a new Draft that copies its groups.
+- **A save replaces the whole tree.** Every `PUT` creates new group and condition records, with new
+  ids, so never keep a group or condition id across saves. Rebuild the tree from the latest
+  read-back instead.
+- **The grid row includes the creator's email and phone number.** Show the name at most, and keep
+  the rest out of the UI and the logs.
+- **Unset totals are `-1`.** A Draft's `membersTotalCount` and `careGapsTotalCount` come back as `-1`,
+  so render them as "—", not as a count.
 - **Activation is asynchronous.** Initializing can take a while on a large population, so don't
   block the UI on it.
 - **Demo may have members but no care-gap data.** A broad filter on demo matched about 319,000
