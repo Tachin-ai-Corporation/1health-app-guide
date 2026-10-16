@@ -21,11 +21,15 @@
 4. The moment the external system hands back its own tracking id, persist it before anything
    else — some vendors cannot easily recover it later. Do the read-modify-write fail-closed (see
    [write-safety-and-fail-closed.md](write-safety-and-fail-closed.md)): refuse to write on a failed
-   read, so a transient error can't erase a real record id.
+   read, so a transient error can't erase a real record id. The template's `mergeCustomData` does
+   this — it writes nothing when its read fails — so check its result and surface a failure loudly,
+   with the id, rather than dropping it.
 
 ## Minimal example
 
 ```ts
+import { mergeCustomData, appData } from "@/lib/api"
+
 type Status = "none" | "derived" | "confirmed" | "submitted" | "approved"
 
 interface Registration {
@@ -42,15 +46,20 @@ function statusOf(reg: Registration): Status {
   return "none"
 }
 
-async function recordSubmission(orgId: string, submission: NonNullable<Registration["submission"]>) {
-  const current = await readCustomData("Organization", orgId) // fail-closed: throws, never guesses
-  await mergeCustomData("Organization", orgId, appData(appId, { registration: { ...current, submission } }))
+async function recordSubmission(appId: string, orgId: number, submission: NonNullable<Registration["submission"]>) {
+  // Deep-merges into the stored registration (derived/confirmed survive) and writes
+  // nothing if its read fails — so a failure must be loud: the vendor's id is in it.
+  const res = await mergeCustomData("Organization", orgId, appData(appId, { registration: { submission } }))
+  if (!res.success) throw new Error(`Submission ${submission.recordId} not recorded: ${res.error}`)
 }
 ```
 
 ## Gotchas
 
 - Derive status from the data present; a parallel status enum will eventually disagree with it.
+- **`readCustomData` doesn't throw** — it returns `{}` when the read fails, so it can't be a
+  fail-closed read. Let `mergeCustomData` do the read (it aborts on failure), or read with
+  `fetchCustomData` and stop on `!success`.
 - A derived guess and a human confirmation are different trust levels — never let a refresh of the
   former overwrite the latter.
 - Prefer the native workflow engine first (see

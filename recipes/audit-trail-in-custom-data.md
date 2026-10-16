@@ -11,14 +11,14 @@
 
 1. Model the log as one `customData` key holding an **array** of entries, each with at least a stable `id`, a timestamp, and whatever else matters (type, outcome, actor).
 2. Assign the `id` yourself at write time (a short random/timestamp token) — a JSON array gives its entries no identity of their own.
-3. **Appending means read the whole array, push the new entry, write the whole array back.** There's no server-side push operation, and `APPEND` replaces whatever top-level key you send in full (see [read-write-custom-data.md](read-write-custom-data.md)).
+3. **Appending means read the whole array, push the new entry, write the whole array back.** There's no server-side push operation, and `APPEND` replaces whatever top-level key you send in full (see [read-write-custom-data.md](read-write-custom-data.md)). So the read before a write must be **confirmed** (`fetchCustomData`): if it fails, write nothing — an empty log rebuilt from a failed read replaces the real one.
 4. **Never physically remove or mutate a past entry.** A correction is itself a new fact — mark the entry with a `deleted`/`corrected` sub-object (`{ at, by, reason }`) and keep it in the array. "This was logged, then retracted because X" is exactly what an audit trail is for.
 5. Filter soft-deleted entries out client-side wherever you display or count "active" entries, but keep them in every read/write round trip.
 
 ## Minimal example
 
 ```ts
-import { readCustomData, appendCustomData } from "@/lib/api"
+import { readCustomData, fetchCustomData, appendCustomData } from "@/lib/api"
 
 const LOG_KEY = "auditLog"
 
@@ -31,21 +31,31 @@ interface AuditEntry {
   deleted?: { at: string; by?: string; reason?: string }
 }
 
+const logFrom = (data: Record<string, unknown>): AuditEntry[] =>
+  Array.isArray(data[LOG_KEY]) ? (data[LOG_KEY] as AuditEntry[]) : []
+
+/** For display. A failed read shows as an empty log — never write this back. */
 async function getAuditLog(instanceId: number): Promise<AuditEntry[]> {
-  const data = await readCustomData("Organization", instanceId)
-  return Array.isArray(data[LOG_KEY]) ? (data[LOG_KEY] as AuditEntry[]) : []
+  return logFrom(await readCustomData("Organization", instanceId))
+}
+
+/** For writes: the CONFIRMED current log, or throw. A failed read must not look like an empty log. */
+async function loadLogForWrite(instanceId: number): Promise<AuditEntry[]> {
+  const res = await fetchCustomData("Organization", instanceId)
+  if (!res.success) throw new Error(`Audit log not updated, nothing was written: ${res.error}`)
+  return logFrom(res.data!)
 }
 
 /** Append one entry, preserving every prior one. */
 async function logAuditEntry(instanceId: number, entry: Omit<AuditEntry, "id">) {
-  const existing = await getAuditLog(instanceId)
+  const existing = await loadLogForWrite(instanceId)
   const withId: AuditEntry = { ...entry, id: `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` }
   return appendCustomData(instanceId, { [LOG_KEY]: [...existing, withId] })
 }
 
 /** Soft-delete: mark an entry retracted, never remove it. */
 async function softDeleteAuditEntry(instanceId: number, entryId: string, reason: string) {
-  const existing = await getAuditLog(instanceId)
+  const existing = await loadLogForWrite(instanceId)
   const log = existing.map((e) =>
     e.id === entryId && !e.deleted ? { ...e, deleted: { at: new Date().toISOString(), reason } } : e,
   )
@@ -57,6 +67,7 @@ const activeEntries = (log: AuditEntry[]) => log.filter((e) => !e.deleted)
 
 ## Gotchas
 
+- **A failed read before an append wipes the log.** `readCustomData` returns `{}` when the read fails, so `[...[], entry]` replaces the whole stored log with one entry. Read with `fetchCustomData` before every write and abort on `!success`; keep `readCustomData` for display.
 - There's no push-to-array primitive — every log write is read-the-array → push → write-the-whole-array-back. Two near-simultaneous writers can race and one entry can be lost; acceptable for most audit trails, but don't treat it as a durability guarantee for a compliance-critical count.
 - Give every entry a stable `id` at write time — you cannot reliably key a correction off `(timestamp, type)` once two events can share a timestamp.
 - Soft-delete only. Physically removing an entry destroys the audit trail's reason for existing — keep it, flagged.

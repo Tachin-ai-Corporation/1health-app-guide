@@ -55,7 +55,8 @@ Your job: wire that prototype to 1health, following the rules below. Add no othe
 3. **All client calls go through `authFetch`** (Bearer token + automatic refresh) — never raw `fetch`.
 4. **Secrets stay server-side.** `ONEHEALTH_SECRET_KEY_*` live in env vars, never shipped to the browser.
    QA keys (`ONEHEALTH_QA_KEY_*`) live only in `.env.local` or on a dev/stage deployment, never on production.
-5. **App-specific data lives in `customData`**, namespaced under `appData.<appId>`.
+5. **App-specific data lives in `customData`**, namespaced under `appData.<appId>`. Never write back
+   a failed read: read with `fetchCustomData` and write nothing unless it succeeded.
 
 ## How to use this guide
 - **Preferred:** `git clone` the repo and grep locally — you get the whole tree at once.

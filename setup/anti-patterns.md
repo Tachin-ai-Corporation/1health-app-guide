@@ -38,6 +38,19 @@ Brittle to any template redesign and non-portable across environments. Resolve t
 structurally and resolve fields by `label`. → [resolve-actionable-step.md](../recipes/resolve-actionable-step.md),
 [dynamic-step-fields.md](../recipes/dynamic-step-fields.md)
 
+## ⛔ Writing back a failed read
+Examples: rebuilding a list or log from `readCustomData` and saving it, spreading the object it
+returns into a patch, or wrapping it in a `try/catch` as if it threw.
+
+**Why it's wrong:** `readCustomData` returns `{}` when the read fails (network, expired session,
+gateway refusal, a wrong type key), which looks exactly like "nothing stored". The bulk write needs
+only the instance id, so it still lands, and replaces the real list, log, or record with one built
+from nothing. Arrays and scalars are replaced even by `mergeCustomData`.
+
+**Instead:** use `readCustomData` for display only. Before any read → modify → write, read with
+`fetchCustomData` and write nothing when `success` is false; `mergeCustomData` and
+`deleteCustomDataKeys` already abort that way. → [write-safety-and-fail-closed.md](../recipes/write-safety-and-fail-closed.md)
+
 ## ⛔ Calling a 1health endpoint without `authFetch`
 Skipping the Bearer token / auto-refresh (e.g. posting to an automation webhook unauthenticated)
 works only by an unguessable URL and skips the platform's auth. Route every 1health call through

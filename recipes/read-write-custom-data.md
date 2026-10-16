@@ -22,6 +22,12 @@ platform's built-in extension point: a schemaless JSON blob on any extensible in
    not deep-merge. Use the merge helper; don't hand-roll it.
 5. **Delete a key** by omission: read → drop → `REPLACE`. There is no per-key delete — `CLEAR` only
    ever removes everything.
+6. **Every read → modify → write starts from a confirmed read, or doesn't write.** `readCustomData`
+   is for display: it returns `{}` when the read fails, which looks exactly like "nothing stored".
+   Build a write from that and you erase what was there. When the new value depends on the current
+   one (append to a list, bump a counter), read with `fetchCustomData` and stop when `success` is
+   false. `mergeCustomData` and `deleteCustomDataKeys` already do this — they return the read's error
+   and write nothing.
 
 ## Primary vs fallback
 
@@ -34,19 +40,26 @@ platform's built-in extension point: a schemaless JSON blob on any extensible in
 ## Minimal example
 
 ```ts
-import { readCustomData, appendCustomData, mergeCustomData, appData, deleteCustomDataKeys } from "@/lib/api"
+import { readCustomData, fetchCustomData, appendCustomData, mergeCustomData, appData, deleteCustomDataKeys } from "@/lib/api"
 
-// READ
+// READ for display — `{}` when nothing is stored OR when the read failed
 const data = await readCustomData("Organization", orgId)      // => Record<string, unknown>
 
 // WRITE a flat top-level field (other top-level keys survive)
 await appendCustomData(orgId, { lastSyncedAt: "2026-07-23T00:00:00Z" })
 
 // WRITE one nested/namespaced field SAFELY (siblings + other apps' data survive)
-await mergeCustomData("Organization", orgId, appData(appId, { phase: "review" }))
+const res = await mergeCustomData("Organization", orgId, appData(appId, { phase: "review" }))
+if (!res.success) throw new Error(res.error)                   // its read failed: nothing was written
 // => customData.appData["<appId>"].phase = "review"
 
-// DELETE keys (read → drop → REPLACE)
+// WRITE a value computed from the current one — from a CONFIRMED read only
+const read = await fetchCustomData("Organization", orgId)      // => ApiResponse<Record<string, unknown>>
+if (!read.success) throw new Error(read.error)                 // unknown ≠ empty: don't write
+const tags = (read.data!.appData as any)?.[appId]?.tags ?? []
+await mergeCustomData("Organization", orgId, appData(appId, { tags: [...tags, "reviewed"] }))
+
+// DELETE keys (read → drop → REPLACE; writes nothing if the read fails)
 await deleteCustomDataKeys("Organization", orgId, ["staleKey"])
 ```
 
@@ -56,6 +69,15 @@ await deleteCustomDataKeys("Organization", orgId, ["staleKey"])
   a nested key like `appData.<appId>` replaces that **entire** subtree, silently wiping its sibling
   keys *and* other apps' namespaces. This is the #1 custom-data footgun.
   **Rule of thumb: flat top-level field → `appendCustomData`; anything nested → `mergeCustomData`.**
+- **⚠️ Never write back what `readCustomData` returns.** A failed read (network, expired session,
+  gateway refusal, an instance the query can't see) comes back as `{}`. Append to that list, spread
+  that object, or drop a key from it, and the write erases the real data. Use `fetchCustomData` and
+  abort on `!success`; see [write-safety-and-fail-closed.md](write-safety-and-fail-closed.md). If
+  your app's copy of the template has no `fetchCustomData`, its `mergeCustomData` and
+  `deleteCustomDataKeys` also write over a failed read — update `lib/api/custom-data.ts` from the
+  template.
+- **Arrays and scalars are replaced, not merged** — even by `mergeCustomData`. Only plain objects are
+  deep-merged, so a list you rebuild from a failed read replaces the stored list.
 - **`customData` may come back as a JSON string**, not an object — always parse (the read helper does).
 - **No per-key delete** — remove keys by read → drop → `REPLACE`. APPENDing a payload *without* a key
   does not remove it.
