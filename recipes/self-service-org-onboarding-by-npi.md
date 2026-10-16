@@ -36,7 +36,8 @@ exists — read the Gotchas before you build this.
 5. **Attach a verified contact point** (e.g. a mobile number), using look-then-create so a retry
    never collides with itself.
 6. **Mint a branded deep-link** tied to the same invitation and send it over the contact point. The
-   PIN travels out-of-band (SMS/email) — never in your JSON response. See
+   PIN travels out-of-band (SMS/email) — never in your JSON response. The call returns one object;
+   hand back its `shortUrl`, never a link with the PIN appended. See
    [deep-link-invite-url.md](deep-link-invite-url.md).
 7. **Report progress as you go.** Five-plus sequential platform calls behind one button press is
    exactly when a bare spinner reads as broken. See
@@ -87,7 +88,7 @@ export async function provisionOrganization(
   const contactPointId = await findOrCreateContactPoint(orgId, contactValue)
 
   onEvent({ step: "link", label: "Preparing invitation link" })
-  const { shortUrl } = await generateInviteLink(orgId)
+  const { shortUrl } = await generateInviteLink(orgId, APP_ID) // the short link, not the PIN-filled `url`
 
   onEvent({ step: "send", label: "Sending invitation" })
   await sendInvite(orgId, contactPointId, invitationPin) // PIN travels here, not in the return value
@@ -130,6 +131,11 @@ async function lookupViaOnehealthMirror(searchText: string, entityTypeCode: 1 | 
 - **1health's NPI mirror's `entityTypeCode`** distinguishes individual (1) vs organization (2)
   records — the wrong value returns an empty list, not an error. Persist `.id`, not `.npi` — both
   are numeric and easy to swap.
+- **Reading an org back doesn't give you the 10-digit number.** On `GET /api/v2/organization/{id}`
+  ([agents.md](https://agents.1health.io/public/prod/api/v2/organization/agents.md)), `npi` is the
+  linked registry record: its 1health `id`, `providerOrganizationName` and mailing address, not the
+  NPI number (verified on demo 2026-10-15). When you re-check a candidate in step 2, compare
+  `npi.id` with the mirror `.id` from step 1.
 
 ## Related
 

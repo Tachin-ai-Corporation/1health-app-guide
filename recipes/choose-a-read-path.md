@@ -71,6 +71,10 @@ function chooseReadPath(need: {
 
 ## Gotchas
 
+- If browser reads on `POST /v2/query` fail with `TypeError: Failed to fetch` and a CORS error,
+  the request body starts with `limit` or `offset` — the gateway refuses that. It isn't a reason to
+  switch read paths; reorder the body (see
+  [query-the-data-graph.md](query-the-data-graph.md#gotchas)).
 - The bare `/v2/query` and its two path-based variants are documented on the *same* agents.md page
   under separate headings — don't assume only the bare form is real just because it's the one most
   examples use.

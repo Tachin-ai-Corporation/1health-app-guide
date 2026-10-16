@@ -18,7 +18,8 @@ instead.)
    prefer one query with relationships over N follow-up calls.
 5. **Extract values** with the helpers — responses are prefixed, so never read
    `attributes["firstName"]` directly.
-6. **Paginate** by looping `offset` until a short page (there is no reliable total).
+6. **Paginate** by looping `offset` until a short page (there is no reliable total). Keep `limit` and
+   `offset` at the **end** of the body — a body that starts with either is refused (see Gotchas).
 
 ## Minimal example
 
@@ -89,6 +90,20 @@ the way you'd expect against a "never set" instance.
 
 ## Gotchas
 
+- **"Failed to fetch" / a CORS error on `/api/v2/query` means the body starts with `limit` or
+  `offset`.** 1health's gateway refuses any query body whose *first* field is `limit` or `offset`,
+  before auth runs. It answers 403 with an HTML page and no CORS headers. A browser can't read that
+  response, so you get only `TypeError: Failed to fetch` plus "No 'Access-Control-Allow-Origin'
+  header" in the console, and no status. A server-side call sees the plain 403, so it's easy to miss
+  in a script. Only the first field matters: `key`, `attributes`, `filter` or `relationships` first
+  all pass, as does `limit` later in the body or inside a relationship. Verified on demo 2026-10-15.
+  Fix: serialize your fields first and pagination last, never
+  `JSON.stringify({ limit, offset, ...request })`. The template's `runQuery` does this for you:
+
+  ```ts
+  const { limit = 50, offset = 0, ...fields } = request
+  const body = JSON.stringify({ ...fields, limit, offset }) // starts with your fields, whatever order the caller used
+  ```
 - **Root attributes come back prefixed `ROOT.<Type>.<attr>`**; related attributes as
   `<Edge>.<Target>.<attr>` (leading source segment dropped). Use `getRootAttr`/`getRelatedAttr`, or
   `findAttr` (suffix match) when unsure — prefix formatting isn't perfectly consistent.
