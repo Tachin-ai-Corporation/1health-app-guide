@@ -60,6 +60,10 @@ through `authFetch`, using the user's own token. See [auth-and-launch.md](auth-a
   or omission-then-`REPLACE` for `customData`. (`/api/v2/file/{id}` is the rare real DELETE.)
 - **`customData` APPEND is a shallow, top-level merge — it does NOT deep-merge.** A partial write
   under a nested/namespaced key replaces that whole subtree. Read → deep-merge client-side → write.
+- **A `/api/v2/query` body must not *start* with `limit` or `offset`.** 1health's gateway refuses
+  it with a 403 that carries no CORS headers, so a browser shows only `TypeError: Failed to fetch`
+  and a CORS error — no status. Put `key` first and `limit`/`offset` last.
+  → [recipes/query-the-data-graph.md](../recipes/query-the-data-graph.md#gotchas)
 - **Query responses are prefixed:** root attrs come back as `ROOT.<Type>.<attr>`, related attrs as
   `<Edge>.<Target>.<attr>`. Use the extraction helpers; prefer suffix-matching.
 - **`customData` may arrive as a JSON string**, not an object. Always parse defensively.

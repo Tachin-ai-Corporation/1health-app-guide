@@ -39,7 +39,7 @@ Or `git clone` this repo so the LLM can grep the whole tree locally (the recomme
 
 ## Status
 
-**Published — `guide_version` 0.5.0 (draft).** Setup docs plus ~125 recipes across 14 categories,
+**Published — `guide_version` 0.5.1 (draft).** Setup docs plus ~125 recipes across 14 categories,
 including:
 - a QA standard: sign in as each role on local and dev/stage builds;
 - a population-health section: the command center, covering cohorts, snapshots, and

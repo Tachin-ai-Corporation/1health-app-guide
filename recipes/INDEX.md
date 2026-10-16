@@ -95,7 +95,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [self-service-org-onboarding-by-npi](self-service-org-onboarding-by-npi.md) | Onboard an org by NPI (verify → find/create → invite) |
 | [partner-invitation-and-pin](partner-invitation-and-pin.md) | Invite a partner org + extract its PIN; recover rejects |
 | [grant-app-access](grant-app-access.md) | Allow an org to use your external application |
-| [deep-link-invite-url](deep-link-invite-url.md) | Generate a deep-link invite URL with an embedded PIN |
+| [deep-link-invite-url](deep-link-invite-url.md) | Generate a deep-link invite URL with an embedded PIN; regenerate it to resend an invitation |
 | [org-claim-status-lookup](org-claim-status-lookup.md) | Look up an org's claim/partnership status, PII-safe |
 | [look-then-create](look-then-create.md) | Avoid duplicate-conflict 400s (look, then create) |
 | [scoped-api-key-with-role](scoped-api-key-with-role.md) | Mint a scoped API key (resolve the role id first) |

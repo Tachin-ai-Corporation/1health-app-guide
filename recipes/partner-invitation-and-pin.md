@@ -107,7 +107,10 @@ async function checkPartnershipPin(orgUuid: string, code: string): Promise<boole
   target status travels as a query param, which is easy to miss when reading the endpoint casually.
 - **Field names for the PIN and the partnership id are not perfectly uniform** — check the documented
   field first, then fall back defensively; never guess a value out of an unrelated field (a hash, a
-  URL slug) just because it happens to look similar.
+  URL slug) just because it happens to look similar. A second named source of the **current** PIN
+  is the deep-link generator's response: `invitationPin` there is an object, `{ id, value, isUsed }`
+  (verified on demo 2026-10-15). Calling it again resends the invitation with a fresh link and the
+  existing unused PIN, with no second upsert — see [deep-link-invite-url.md](deep-link-invite-url.md).
 - **Never surface the PIN anywhere client-visible** (logs, error toasts) before it has actually been
   delivered out-of-band — see [deep-link-invite-url.md](deep-link-invite-url.md).
 - **Checking a PIN and consuming it are different calls** — `POST /v3/otp/verify-code` only

@@ -101,6 +101,10 @@ async function fetchAllIdsNewestByAttribute(filter: string, max: number): Promis
 
 ## Gotchas
 
+- **Put `limit` and `offset` at the end of the body.** A body that *starts* with either is refused
+  by 1health's gateway with a 403 that has no CORS headers, which a browser reports only as
+  `TypeError: Failed to fetch` — see [query-the-data-graph.md](query-the-data-graph.md#gotchas).
+  The examples above start with `key` for that reason.
 - **Always pass `sort` explicitly.** The documented default (id `DESC`) held when checked against the
   demo environment, and `sort` is case-insensitive with invalid values falling back to `DESC` — but an
   earlier app observed oldest-first with no `sort` sent, so don't lean on the default.
