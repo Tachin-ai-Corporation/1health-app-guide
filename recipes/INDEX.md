@@ -150,6 +150,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | Recipe | For |
 |---|---|
 | [native-email-and-sms](native-email-and-sms.md) | Send email/SMS via 1health (`/v2/email/send`, `/v2/twilio/send`) |
+| [branded-html-email](branded-html-email.md) | Branded HTML email with no CSS (`/v2/email/send/html`); why a send 403s with an HTML page |
 | [verify-a-contact-channel](verify-a-contact-channel.md) | Prove someone controls an email/phone: public OTP, link, or PIN check |
 | [custom-otp](custom-otp.md) · **adv** | Self-rolled OTP — the fallback when the platform OTP refuses your session |
 

@@ -24,7 +24,9 @@ belongs in `Person` `customData`. → [per-user-preferences.md](../recipes/per-u
 ## ⛔ A third-party mailer (SendGrid, etc.) as the default
 1health exposes native email and SMS. Reach for a third-party mailer only with a concrete reason
 the native endpoints can't meet — otherwise it's an unnecessary extra backend and secret to manage.
-→ [native-email-and-sms.md](../recipes/native-email-and-sms.md)
+An HTML email refused with a 403 isn't such a reason: it's the markup (inline CSS), which you can
+fix. → [native-email-and-sms.md](../recipes/native-email-and-sms.md),
+[branded-html-email.md](../recipes/branded-html-email.md)
 
 ## ⛔ Hardcoding environment-specific ids or GUIDs
 Campaign, template, step, role, application, and tenant ids — and dynamic step-field
