@@ -65,6 +65,8 @@ async function sendSms(toPhoneE164: string, text: string): Promise<boolean> {
 
 ## Related
 
+- [branded-html-email.md](branded-html-email.md) — sending HTML through `/v2/email/send/html`: branded
+  layouts with no CSS, and why a send can 403 with an HTML page.
 - [custom-otp.md](custom-otp.md) — builds SMS delivery into a self-rolled verification flow when platform OTP itself isn't usable.
 - [anti-patterns.md](../setup/anti-patterns.md) — the SendGrid deviation this recipe replaces.
 - Concepts: [setup/rules-of-the-road.md](../setup/rules-of-the-road.md).
