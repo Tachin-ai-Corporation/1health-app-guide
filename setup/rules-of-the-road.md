@@ -63,6 +63,9 @@ through `authFetch`, using the user's own token. See [auth-and-launch.md](auth-a
 - **Query responses are prefixed:** root attrs come back as `ROOT.<Type>.<attr>`, related attrs as
   `<Edge>.<Target>.<attr>`. Use the extraction helpers; prefer suffix-matching.
 - **`customData` may arrive as a JSON string**, not an object. Always parse defensively.
+- **Never write back a failed read.** `readCustomData` returns `{}` when the read fails, which looks
+  like "nothing stored" — a write built from it erases the real data. Read with `fetchCustomData` and
+  write nothing unless `success` is true. → [recipes/write-safety-and-fail-closed.md](../recipes/write-safety-and-fail-closed.md)
 - **Version prefixes are not uniform:** mostly `v2`, grid/list is `v3`, GraphQL has none. Don't
   derive paths from a single version constant.
 - **Timestamps often have no timezone** — treat as UTC (append `Z`) before parsing.

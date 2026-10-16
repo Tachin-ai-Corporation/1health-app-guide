@@ -18,28 +18,28 @@
 ## Minimal example
 
 ```ts
-import { readCustomData, mergeCustomData, appData } from "@/lib/api"
+import { fetchCustomData, mergeCustomData, appData } from "@/lib/api"
 
 const LEDGER_KEY = "recordsFiled"
 type Ledger = Record<string, { targetId: number; at: string }>
 
 async function loadLedger(ownerType: string, ownerId: number, appId: string): Promise<Ledger> {
-  try {
-    const data = await readCustomData(ownerType, ownerId)
-    return ((data.appData as any)?.[appId]?.[LEDGER_KEY] as Ledger) ?? {}
-  } catch (error) {
-    // An unreadable ledger must NOT look like an empty one.
-    throw new Error(`Could not read the ledger, so nothing was written: ${error}`)
-  }
+  // fetchCustomData, not readCustomData: the latter returns {} on failure instead
+  // of throwing, so a failed read would look like an empty ledger.
+  const res = await fetchCustomData(ownerType, ownerId)
+  if (!res.success) throw new Error(`Could not read the ledger, so nothing was written: ${res.error}`)
+  return ((res.data!.appData as any)?.[appId]?.[LEDGER_KEY] as Ledger) ?? {}
 }
 
 let writeChain: Promise<unknown> = Promise.resolve()
 
 function recordDone(ownerType: string, ownerId: number, appId: string, sourceKey: string, targetId: number) {
   writeChain = writeChain.then(async () => {
-    const ledger = await loadLedger(ownerType, ownerId, appId).catch(() => ({}) as Ledger)
-    const next = { ...ledger, [sourceKey]: { targetId, at: new Date().toISOString() } }
-    await mergeCustomData(ownerType, ownerId, appData(appId, { [LEDGER_KEY]: next }))
+    // Send just the new entry: mergeCustomData deep-merges it into the ledger it reads
+    // (so every existing entry survives) and writes nothing if that read fails.
+    const entry = { [sourceKey]: { targetId, at: new Date().toISOString() } }
+    const res = await mergeCustomData(ownerType, ownerId, appData(appId, { [LEDGER_KEY]: entry }))
+    if (!res.success) console.warn("[ledger] entry not recorded:", res.error) // best-effort on write; no key values
   })
   return writeChain
 }
@@ -60,6 +60,7 @@ export async function writeOnce(
 ## Gotchas
 
 - **An empty result and a broken parser are indistinguishable to the caller.** The failure mode this pattern exists to prevent is exactly this: a `/query` answered `200` with a shape a parser didn't recognize, zero rows came back, and zero rows read as "nothing filed yet" — so an automated trigger refiled the same record on every run. Positively confirm the read succeeded; never infer "empty" from "I found nothing."
+- **`readCustomData` can't be the fail-closed read** — it returns `{}` on failure rather than throwing, so a `try/catch` around it never fires and an unreadable ledger reads as "nothing filed yet". Read with `fetchCustomData` and throw on `!success`.
 - **The ledger is best-effort on write, fail-closed on read.** A failed ledger *write* only risks a duplicate on the next run, which the read-side check can still catch. A failed ledger *read* must abort the write entirely.
 - **Prefer two independent signals when you can afford it** — a ledger entry AND a deterministic fingerprint embedded in the created record (a name, a marker) — because a platform that renames, truncates, or reshapes a field can silently defeat one signal without you noticing, and the second one still catches it.
 - **Never log the values you are deduping on if they carry PII/PHI** — log key names, counts, and ids, never content, so the diagnostics that make this debuggable don't become a new data leak.

@@ -26,7 +26,7 @@
 // complianceRecord | Journey customData (clinician-entered)    | unchanged
 // orgDefaults      | Organization customData (appData)         | unchanged
 
-import { readCustomData, appendCustomData } from "@/lib/api"
+import { readCustomData, fetchCustomData, appendCustomData } from "@/lib/api"
 import { getContactPhone } from "@/lib/api/person"
 
 export interface SeamData {
@@ -41,7 +41,7 @@ export async function loadSeamData(journeyId: number, personId: number, orgId: n
   const [journeyData, contactPhone, orgData] = await Promise.all([
     readCustomData("WorkflowTemplate", journeyId),          // a journey instance, queried by its type key
     getContactPhone(personId).catch(() => undefined),        // one failed sub-fetch blanks THIS field only
-    readCustomData("Organization", orgId).catch(() => ({})),
+    readCustomData("Organization", orgId),                   // already degrades to {} on failure (display only)
   ])
   return {
     journeyId,
@@ -52,9 +52,14 @@ export async function loadSeamData(journeyId: number, personId: number, orgId: n
   }
 }
 
-export async function patchComplianceRecord(journeyId: number, current: ComplianceRecord, patch: Partial<ComplianceRecord>) {
+// Writes re-read with fetchCustomData: a degraded (empty) field from loadSeamData must never be a write's base.
+export async function patchComplianceRecord(journeyId: number, patch: Partial<ComplianceRecord>) {
+  const read = await fetchCustomData("WorkflowTemplate", journeyId)
+  if (!read.success) throw new Error(`Compliance record not saved: ${read.error}`) // unknown ≠ empty
+  const current = (read.data!.complianceRecord as ComplianceRecord) ?? emptyComplianceRecord()
   const next = { ...current, ...patch, updatedAt: new Date().toISOString() }
-  await appendCustomData(journeyId, { complianceRecord: next })     // flat top-level key: APPEND is safe here
+  const res = await appendCustomData(journeyId, { complianceRecord: next }) // flat top-level key: APPEND is safe here
+  if (!res.success) throw new Error(`Compliance record not saved: ${res.error}`)
   return next
 }
 ```
@@ -64,6 +69,7 @@ export async function patchComplianceRecord(journeyId: number, current: Complian
 - **Document the future source even when nothing implements it yet** — an undocumented "we'll fix this later" field is indistinguishable from a permanent one, and the next person to touch the module has no way to know which fields are load-bearing placeholders.
 - **Coerce platform object-or-scalar fields at the seam, once** — an id that sometimes arrives as a bare value and sometimes as `{ id, ... }` will otherwise crash a render deep in a component that has no context to debug it.
 - **Degrade per field, not per screen** — one failed sub-fetch (a phone lookup, an optional integration) should blank that field, not throw and blank the whole workflow.
+- **Degrade for display, never for writes.** A field that fell back to empty because its read failed must not become the base of a save — the patch would replace the real stored value. Patch functions re-read with `fetchCustomData` and refuse to write on `!success`, instead of trusting what the load returned.
 - **A seam is not a cache** — it re-reads on load. If you need to avoid re-hitting an expensive or rate-limited external call, cache that value *into* `customData` explicitly (see cache-reference-data-in-custom-data.md); don't quietly hold it in module state.
 
 ## Related

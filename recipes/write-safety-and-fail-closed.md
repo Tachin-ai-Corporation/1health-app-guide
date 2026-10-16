@@ -8,50 +8,60 @@
 ## Pattern
 
 1. Any "merge a patch into an existing blob" write is a read-modify-write: its correctness depends entirely on the read actually reflecting current state.
-2. Treat a **failed or errored read as "unknown," never as "empty."** A ready-made helper that returns `{}` on both "confirmed empty" and "request failed" is not enough here — use the lower-level call and check its own success flag so you can tell the two apart.
+2. Treat a **failed or errored read as "unknown," never as "empty."** A helper that returns `{}` on both "confirmed empty" and "request failed" (the template's `readCustomData`) is not enough here — read with `fetchCustomData`, whose `success` flag tells the two apart, and treat an instance that doesn't come back as "unknown" too.
 3. If you can't confirm what's there, **refuse to write** rather than rebuild the target from just your patch. An empty read masquerading as "nothing there yet" is how existing sibling keys — or another app's namespace — get silently wiped.
 4. A fresh session's very first read can lose a race with session/propagation setup and fail transiently. Retry the read once or twice (not a long backoff loop) before giving up — this alone fixes most "it worked the second time" reports.
 5. Only proceed to write once the read has succeeded; merge client-side, then write the whole merged object back.
 6. For a write that must never double-fire (a real-world side effect — filing a document, sending a notification), keep a small ledger (an id/hash of "already done this") in `customData` and check it in addition to the fail-closed read — and refuse to act when the ledger's state can't be confirmed either.
 
+## Primary vs fallback
+
+- **Primary — the template's fail-closed helpers.** `mergeCustomData` and `deleteCustomDataKeys`
+  read through `fetchCustomData` and write nothing when that read fails; check their result. For
+  your own read → modify → write, call `fetchCustomData` and stop on `!success`.
+- **Fallback — `runQuery` directly** when your app's copy of the template predates
+  `fetchCustomData`: check `res.success` yourself, and require the row to come back before treating
+  its `customData` as current. Then update `lib/api/custom-data.ts` from the template, because the
+  older `mergeCustomData` / `deleteCustomDataKeys` write over a failed read.
+
 ## Minimal example
 
 ```ts
-import { runQuery, findAttr, parseCustomData, eq, appendCustomData } from "@/lib/api"
-
-interface WriteResult { success: boolean; error?: string }
+import { fetchCustomData, mergeCustomData, appData, type ApiResponse } from "@/lib/api"
 
 /**
- * Merge a patch into a shared customData bucket. Refuses to write when the
- * read can't be confirmed, instead of treating a failed read as "empty".
- *
- * Uses `runQuery` directly (not a `readCustomData`-style helper that returns
- * `{}` on both "confirmed empty" and "read failed") because fail-closed
- * depends on telling those two outcomes apart.
+ * Merge an absolute patch, retrying once — a fresh session's first read can
+ * fail transiently. `mergeCustomData` refuses to write when its own read fails,
+ * and re-sending the same patch lands on the same result, so one retry is safe.
  */
-async function mergeSafely(
-  type: string,
-  instanceId: number,
-  patch: Record<string, unknown>,
-): Promise<WriteResult> {
-  let confirmed: Record<string, unknown> | undefined
+async function mergeSafely(type: string, instanceId: number, patch: Record<string, unknown>): Promise<ApiResponse<unknown>> {
+  let res = await mergeCustomData(type, instanceId, patch)
+  if (!res.success) res = await mergeCustomData(type, instanceId, patch)
+  if (!res.success) console.warn(`[customData] not written: ${Object.keys(patch).join(", ")} on ${type} ${instanceId}`) // keys, never values
+  return res
+}
 
-  for (let attempt = 0; attempt < 2 && !confirmed; attempt++) {
-    const res = await runQuery({ key: type, attributes: ["id", "customData"], filter: eq("id", instanceId), limit: 1 })
-    if (res.success) {
-      const row = res.data?.data[0]
-      confirmed = row ? parseCustomData(findAttr(row, "customData")) : {}
-    }
-  }
+/**
+ * A value computed from the current one (here: a counter). Build it only from a
+ * CONFIRMED read — a failed read must not restart the count at zero.
+ */
+async function bumpCounter(type: string, instanceId: number, appId: string, key: string): Promise<ApiResponse<unknown>> {
+  const read = await fetchCustomData(type, instanceId)
+  if (!read.success) return read // unknown ≠ empty: refuse to write
+  const current = Number((read.data!.appData as any)?.[appId]?.[key] ?? 0)
+  return mergeCustomData(type, instanceId, appData(appId, { [key]: current + 1 }))
+}
+```
 
-  if (!confirmed) {
-    // Never fall through to "assume empty" — that would REPLACE the whole
-    // bucket with just `patch`, discarding every sibling key.
-    return { success: false, error: "Could not confirm existing data; refusing to write" }
-  }
+Fallback read, for a template copy without `fetchCustomData`:
 
-  const res = await appendCustomData(instanceId, { ...confirmed, ...patch })
-  return { success: res.success, error: res.success ? undefined : res.error }
+```ts
+import { runQuery, findAttr, parseCustomData, eq } from "@/lib/api"
+
+async function readConfirmed(type: string, instanceId: number): Promise<Record<string, unknown> | null> {
+  const res = await runQuery({ key: type, attributes: ["id", "customData"], filter: eq("id", instanceId), limit: 1 })
+  const row = res.success ? res.data?.data?.[0] : undefined
+  return row ? parseCustomData(findAttr(row, "customData")) : null // null = unknown: don't write
 }
 ```
 
@@ -59,6 +69,8 @@ async function mergeSafely(
 
 - "Refuse to write" beats "write something" whenever that something might be an accidental full replace — a raised error is recoverable (retry the click); a silently emptied bucket usually isn't noticed until much later.
 - Keep "the read succeeded and found nothing" (genuinely empty — safe to treat as `{}`) and "the read failed" (unknown — must not be treated as `{}`) as two distinct states in your result type; don't let a convenience helper quietly collapse them.
+- **A `try/catch` around `readCustomData` never fires** — it returns `{}` on failure instead of throwing. Fail-closed code that relies on a thrown error must read with `fetchCustomData` and throw on `!success` itself.
+- **The write doesn't validate what the read did.** The bulk write needs only the instance id, so it lands even when the read used a wrong type key (`"Journey"` instead of `"WorkflowTemplate"` is a 400) or the query returned no row for that instance. Treat both as "unknown," never as "empty."
 - This composes with the deep-merge helper from [read-write-custom-data.md](read-write-custom-data.md) — fail-closed governs *whether* you write; deep-merge governs *what* you send.
 - The platform has no compare-and-set, so fail-closed reduces but doesn't eliminate races between two concurrent writers. Pair it with a rebuildable index ([custom-data-as-state-machine.md](custom-data-as-state-machine.md)) to recover from a lost race, and with a dedup ledger when a write is a real-world action that must not double-fire.
 - Log which keys you refused to touch (never their values) when a read fails — it turns a silent data-loss bug into a visible, debuggable one.

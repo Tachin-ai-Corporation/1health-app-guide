@@ -18,20 +18,25 @@ Both of the following are legitimate, for different jobs — pick by how durable
 ## Minimal example
 
 ```ts
-import { readCustomData, mergeCustomData, appData } from "@/lib/api"
+import { readCustomData, fetchCustomData, mergeCustomData, appData } from "@/lib/api"
 
 const MAX_RECENT = 20
 
-/** The signed-in user's recently viewed record ids, most-recent-first. */
-async function getRecentlyViewed(appId: string, personId: number): Promise<string[]> {
-  const data = await readCustomData("Person", personId)
+const recentFrom = (data: Record<string, unknown>, appId: string): string[] => {
   const ids = (data.appData as Record<string, any> | undefined)?.[appId]?.recentlyViewed
   return Array.isArray(ids) ? ids.map(String) : []
 }
 
+/** The signed-in user's recently viewed record ids, most-recent-first (for display). */
+async function getRecentlyViewed(appId: string, personId: number): Promise<string[]> {
+  return recentFrom(await readCustomData("Person", personId), appId)
+}
+
 /** Append one id, de-duped and capped, on the signed-in user's own Person. */
 async function pushRecentlyViewed(appId: string, personId: number, id: string) {
-  const existing = await getRecentlyViewed(appId, personId)
+  const read = await fetchCustomData("Person", personId)
+  if (!read.success) return read // unknown ≠ empty: don't reset the list over a failed read
+  const existing = recentFrom(read.data!, appId)
   const recentlyViewed = [id, ...existing.filter((x) => x !== id)].slice(0, MAX_RECENT)
   return mergeCustomData("Person", personId, appData(appId, { recentlyViewed }))
 }
@@ -49,6 +54,7 @@ function setLastUsedFilter(filter: string) {
 - This is still a nested/namespaced `customData` write — use the deep-merge helper (`mergeCustomData`), not a raw `APPEND`, or you'll wipe sibling `appData` keys, including other apps' data on a shared Person. See [read-write-custom-data.md](read-write-custom-data.md).
 - Don't reach for `localStorage` for anything that must be visible on a second device, or that your own backend logic needs to read — it's invisible to 1health and to every other client.
 - Cap array-shaped preferences before writing; an unbounded recent-items list will grow every session.
+- **Build the new list from a confirmed read** (`fetchCustomData`), not from `readCustomData`. Arrays are replaced, not deep-merged, so a list rebuilt from a failed read (`{}`) resets the user's history to one item.
 
 ## Related
 

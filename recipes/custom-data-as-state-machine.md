@@ -13,22 +13,23 @@
 2. Treat each **step's own** `customData` as the source of truth for what happened at that step. Read it fresh rather than trusting in-memory state — another actor (a different plane of the same app, a manual fix) may have changed it.
 3. Maintain a small denormalized **index** — a summary object (phase, a few display fields, flags) — on the **parent** instance (the journey), updated whenever a step's data changes meaningfully. This makes list/dashboard reads cheap: one query over the parent type returns every row's status without fetching each step.
 4. Because the index is a cache, derive it with a **pure function** over the authoritative step data (e.g. `derivePhase(steps)`), and expose a `rebuild` operation that recomputes and rewrites it from scratch. Call `rebuild` whenever the index might have drifted — after a failed write, a manual data fix, or a template change.
-5. Every write is read → merge → write: read the current namespaced object, shallow-merge your patch into it in memory, then `APPEND` the whole merged object back. Never patch a nested key directly (see [read-write-custom-data.md](read-write-custom-data.md)).
-6. Guard which phase/step a given caller is allowed to write in code, not just in the UI — a state machine is only as trustworthy as its transition guard.
+5. Every write is read → merge → write: read the current namespaced object, shallow-merge your patch into it in memory, then `APPEND` the whole merged object back. Never patch a nested key directly (see [read-write-custom-data.md](read-write-custom-data.md)). If the read fails, write nothing — `mergeCustomData` does all three steps and aborts on a failed read.
+6. Read and write with the **query type keys**: a journey instance is `"WorkflowTemplate"` and a step instance is `"WorkflowTemplateStep"`. `"Journey"` and `"Step"` don't exist (400 on demo).
+7. Guard which phase/step a given caller is allowed to write in code, not just in the UI — a state machine is only as trustworthy as its transition guard.
 
 ## Minimal example
 
 ```ts
-import { readCustomData, mergeCustomData, appData } from "@/lib/api"
+import { fetchCustomData, mergeCustomData, appData } from "@/lib/api"
 
 const NS = "appData"
 
 // A step's own customData is authoritative for that step's outcome.
 async function writeStepOutcome(appId: string, stepInstanceId: number, patch: Record<string, unknown>) {
-  return mergeCustomData("Step", stepInstanceId, appData(appId, patch))
+  return mergeCustomData("WorkflowTemplateStep", stepInstanceId, appData(appId, patch)) // writes nothing if its read fails
 }
 
-interface CaseIndex {
+type CaseIndex = {
   phase: "draft" | "in_review" | "completed"
   patientDisplay?: string
   attention?: "info_requested" | null
@@ -44,9 +45,11 @@ function derivePhase(steps: Record<string, { status: string }>): CaseIndex["phas
 // Recompute the index from authoritative data and write it back — call after
 // any step write, and whenever the index might have drifted.
 async function rebuildIndex(appId: string, journeyId: number, steps: Record<string, { status: string }>) {
-  const current = await readCustomData("Journey", journeyId)
-  const index: CaseIndex = { ...(current[NS] as any)?.[appId], phase: derivePhase(steps) }
-  await mergeCustomData("Journey", journeyId, appData(appId, index))
+  const read = await fetchCustomData("WorkflowTemplate", journeyId) // a journey's query type key
+  if (!read.success) throw new Error(`Index not rebuilt: ${read.error}`) // it's a cache: retry later, never guess
+  const index: CaseIndex = { ...(read.data![NS] as any)?.[appId], phase: derivePhase(steps) }
+  const res = await mergeCustomData("WorkflowTemplate", journeyId, appData(appId, index))
+  if (!res.success) throw new Error(`Index not rebuilt: ${res.error}`)
   return index
 }
 ```
@@ -55,6 +58,7 @@ async function rebuildIndex(appId: string, journeyId: number, steps: Record<stri
 
 - The index is a **cache, not a fact** — a write can fail, a step can change outside your app, or your derivation logic can evolve. Keep the pure `derive*` function around so `rebuild` can always recover it, rather than trusting whatever the index currently says.
 - Step instance ids are per-parent — resolve name → id fresh for each journey; never cache a step id across journeys.
+- **A wrong type key turns every read into a failure — and, with a helper that treats a failed read as `{}`, every write into a wipe.** The bulk write needs only the instance id, so it lands anyway. Use `"WorkflowTemplate"` / `"WorkflowTemplateStep"`, and a `mergeCustomData` that aborts on a failed read (see [write-safety-and-fail-closed.md](write-safety-and-fail-closed.md)).
 - `customData` is schemaless and long-lived: read defensively, since blobs written by an earlier version of your app are still out there.
 - A fast-changing field (a live counter/ticket) that races the index update should get its own top-level key, not live inside the index object, or a concurrent write to one can clobber the other's `APPEND`.
 - The platform has no compare-and-set — two concurrent writers to the same instance can still clobber each other's fields. Recover with the same `rebuild` operation rather than trying to prevent every race.
