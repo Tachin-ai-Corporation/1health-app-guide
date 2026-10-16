@@ -9,7 +9,7 @@ secret for a project the user is building.
 
 > **⚠ Not yet in 1health's published API docs:** `GET/POST/PATCH /api/v2/external-application`, `PUT /api/v2/external-application/{id}`, and `PUT /api/v2/external-application/{id}/state`. 1health supports them for third-party apps, but agents.1health.io has no page for them yet — the shapes shown here come from working apps. Test them against demo before you rely on them.
 
-**Reference code:** [`app/api/console/application/route.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/app/api/console/application/route.ts#L155) · [`lib/api/console-application.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/api/console-application.ts) · [`lib/api/config.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/api/config.ts#L265) (the lifecycle-state route shape — defined there, not yet exercised by that app)
+**Reference code:** [`app/api/console/application/route.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/app/api/console/application/route.ts#L155) · [`lib/api/console-application.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/api/console-application.ts)
 **Seen in:** patient-vault
 
 ## Pattern

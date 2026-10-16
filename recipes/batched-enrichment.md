@@ -5,8 +5,8 @@ step-completion timestamp), and you don't want an N+1 call-per-row loop to backf
 **Routes:** `POST /api/v2/query` (RSQL OR-of-equals: `id==a,id==b,...`) → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
 (same route as query-the-data-graph.md) — or a dedicated bulk-by-id endpoint where the type has one
 (see enrich-grid-with-custom-data.md for the `customData` case)
-**Reference code:** [`lib/api/export-completed-dates.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/export-completed-dates.ts#L33)
-**Seen in:** trc-care-coordinator (batched `/query` by id); med-adherence-bcbsm (the same
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app (batched `/query` by id); a medication-adherence app (the same
 batched-by-id shape, via `customData`'s own bulk-read endpoint — see enrich-grid-with-custom-data.md)
 
 ## Pattern

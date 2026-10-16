@@ -7,8 +7,8 @@ tries to write back (upload/send something) — you need to lazily create and sh
 reciprocal campaign at that moment, instead of a separate "set up sharing" step up front.
 **Routes:** n/a — orchestrates provisioning (create → activate → share) triggered by a write
 action; see share-with-partner-org.md and provision-templates-and-campaigns.md.
-**Reference code:** [`container-detail.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/components/container-detail.tsx#L530) (`handleUploadFile`, "mirroring" branch)
-**Seen in:** secure-share
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app
 
 ## Pattern
 
@@ -24,25 +24,28 @@ action; see share-with-partner-org.md and provision-templates-and-campaigns.md.
 ## Minimal example
 
 ```ts
+import { ensureWorkflow } from "@/lib/api"
+
+// `DisplayChannel` is the collapsed mirror-pair row from mirror-pair-bidirectional-share.md.
 async function uploadToChannel(channel: DisplayChannel, file: File) {
-  let myCampaignId = channel.myCampaignIds[0] ?? null
+  const campaignId = channel.ownCampaignId ?? (await createOwnSide(channel))
+  return uploadToCampaign(campaignId, file)   // normal journey-create + step-submit + upload
+}
 
-  if (!myCampaignId) {
-    setStatus("mirroring")
-    const created = await ensureWorkflow({
-      templateName: TEMPLATE_NAME,
-      campaignName: channel.name,
-      share: { partnerOrgId: channel.partnerOrgId },
-    })
-    if (!created.success || !created.campaignId) {
-      throw new Error(created.error ?? "Could not set up your side of this channel")
-    }
-    myCampaignId = created.campaignId
-    channel.allCampaignIds.push(myCampaignId)
-    channel.myCampaignIds.push(myCampaignId)
+// No side of your own yet: provision + share one with the SAME partner, then fold it into the pair.
+async function createOwnSide(channel: DisplayChannel): Promise<number> {
+  setStatus("mirroring")
+  const result = await ensureWorkflow({
+    templateName: TEMPLATE_NAME,
+    campaignName: channel.shown.name,
+    share: { partnerOrgId: channel.partner.orgId },
+  })
+  if (!result.success || !result.campaignId) {
+    throw new Error(result.error ?? "Could not set up your side of this channel")
   }
-
-  return uploadToCampaign(myCampaignId, file)   // normal journey-create + step-submit + upload
+  channel.pairCampaignIds.push(result.campaignId)
+  channel.ownCampaignId = result.campaignId
+  return result.campaignId
 }
 ```
 

@@ -8,8 +8,8 @@ notification/webhook configuration onto the journeys made from it.
 [step-config-notifications-webhooks.md](step-config-notifications-webhooks.md) (resolve base
 template+step, then `GET .../configuration`) · write via the same
 `PUT .../workflow-template-step/{stepId}/configuration` → [route docs](https://agents.1health.io/public/prod/api/manifest.md), targeted at the **journey's own** step id
-**Reference code:** [`lib/api/step-subscriptions.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/step-subscriptions.ts#L795) (`copyConfigToJourneyStep`) · [`lib/api/step-config.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/step-config.ts) (`updateStepConfiguration`, the generic partial-config writer)
-**Seen in:** secure-share
+**Reference code:** [`lib/api/step-config.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/step-config.ts) (`updateStepConfiguration`, the generic partial-config writer)
+**Seen in:** A secure file-sharing app
 
 ## Pattern
 
@@ -40,34 +40,41 @@ template+step, then `GET .../configuration`) · write via the same
 ## Minimal example
 
 ```ts
-import { updateStepConfiguration } from "@/lib/api"
+import { updateStepConfiguration, submitStepWithFile, WHEN_ON_STEP_COMPLETION, type ApiResponse } from "@/lib/api"
+
+// Copied rows keep every field except `id`: those ids belong to the base template's rows,
+// and the backend assigns the journey step's rows their own.
+function withoutRowId<T extends { id?: number }>(row: T): Omit<T, "id"> {
+  const { id: _baseRowId, ...copy } = row
+  return copy
+}
+
+// Fix a known trigger-phase bug in transit: no phase, or "On Step Submit", becomes completion.
+function withCompletionPhase<T extends { id?: number; whenToExecute?: string[] }>(row: T) {
+  const phase = row.whenToExecute ?? []
+  const phaseIsWrong = phase.length === 0 || phase.includes("On Step Submit")
+  return phaseIsWrong ? { ...withoutRowId(row), whenToExecute: [WHEN_ON_STEP_COMPLETION] } : withoutRowId(row)
+}
 
 async function copyStepConfigToJourney(
   campaignId: number, journeyId: number, journeyStepId: number,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ApiResponse<unknown>> {
   // 1. Read the source config off the campaign's base-template step.
   const source = await resolveBaseStepConfig(campaignId)   // see resolve-actionable-step.md
-  if (!source || (source.notifications.length === 0 && source.webhooks.length === 0)) {
-    return { success: true }                                // nothing configured -> nothing to copy
-  }
+  const notifications = source?.notifications ?? []
+  const webhooks = source?.webhooks ?? []
+  if (notifications.length + webhooks.length === 0) return { success: true }   // nothing to copy
 
-  // 2. Strip ids (they belong to the base template's rows) + fix a known trigger-phase bug.
-  const stripId = <T extends { id?: number }>({ id, ...rest }: T) => rest
-  const fixPhase = (n: (typeof source.notifications)[number]) =>
-    !n.whenToExecute?.length || n.whenToExecute.includes("On Step Submit")
-      ? { ...stripId(n), whenToExecute: ["On Step Completion"] }
-      : stripId(n)
-
-  // 3. Stamp onto the JOURNEY's own step id, before it can complete.
+  // 2. Stamp onto the JOURNEY's own step id, before it can complete. Send only keys that have rows.
   return updateStepConfiguration(journeyStepId, {
-    ...(source.notifications.length && { notifications: source.notifications.map(fixPhase) }),
-    ...(source.webhooks.length && { webhooks: source.webhooks.map(stripId) }),
+    ...(notifications.length > 0 && { notifications: notifications.map(withCompletionPhase) }),
+    ...(webhooks.length > 0 && { webhooks: webhooks.map(withoutRowId) }),
   })
 }
 
 // Caller: create journey -> find target step -> copy config -> THEN submit/complete it.
-await copyStepConfigToJourney(campaignId, journeyId, uploadStep.id)
-await submitStepWithFile(journeyId, uploadStep.id, fields, fileFieldId, file)
+await copyStepConfigToJourney(campaignId, journeyId, stepToStamp.id)
+await submitStepWithFile(journeyId, stepToStamp.id, fields, fileFieldId, file)
 ```
 
 ## Gotchas

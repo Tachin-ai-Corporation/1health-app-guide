@@ -5,8 +5,8 @@ by virtue of being a server) and must decide whether *this* caller may see or ch
 resource.
 **Routes:** n/a — pattern for establishing identity; typically backed by `GET /api/v2/user/myself`
 → [agents.md](https://agents.1health.io/public/prod/api/v2/user/myself/agents.md) and `GET /api/v2/tenant` → [agents.md](https://agents.1health.io/public/prod/api/v2/tenant/agents.md) to resolve who's asking.
-**Reference code:** [`lib/expertdx/session.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/session.ts#L123)
-**Seen in:** expertdx-ordering-provider
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 
@@ -34,28 +34,34 @@ resource.
 import "server-only"
 import { cookies } from "next/headers"
 
-export interface Caller { userId: number; orgId: number | null; tenantId: number }
+export interface SignedInUser { userId: number; orgId: number | null; tenantId: number }
+export class NotSignedInError extends Error {} // → 401
+export class AccessDeniedError extends Error {} // → 403
 
-export async function requireCaller(): Promise<Caller> {
-  const token = (await cookies()).get("access_token")?.value // httpOnly cookie only
-  if (!token) throw new UnauthorizedError()
+// Ask 1health whose token this is. null = missing, expired or forged — 1health decides, not us.
+async function whoAmI(token: string | undefined) {
+  if (!token) return null
+  const res = await fetch(`${baseUrl()}/api/v2/user/myself`, { headers: { Authorization: `Bearer ${token}` } })
+  const me = res.ok ? await res.json() : null
+  return me?.id ? me : null
+}
 
-  const me = await fetch(`${baseUrl()}/api/v2/user/myself`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((r) => (r.ok ? r.json() : null))
-  if (!me?.id) throw new UnauthorizedError() // a forged/expired token fails HERE
-
+export async function requireSignedInUser(): Promise<SignedInUser> {
+  const me = await whoAmI((await cookies()).get("access_token")?.value) // httpOnly cookie only
+  if (!me) throw new NotSignedInError()
+  // orgId may be null: signed in but not onboarded yet — a real state, not "signed out".
   return { userId: me.id, orgId: me.tenantContext?.organizationId ?? null, tenantId: me.tenantContext.id }
 }
 
 // Re-derive ownership from the RESOURCE, never from the request.
-export async function authorizeRecord(caller: Caller, recordId: number) {
-  const record = await serviceCall<Record>("record/authorize", "/api/v2/query", {
+export async function authorizeRecord(user: SignedInUser, recordId: number) {
+  const record = await serviceCall("records/authorize", "/api/v2/query", {
     method: "POST",
     body: JSON.stringify({ key: "Record", filter: `id==${recordId}`, attributes: ["id", "ownerOrgId"] }),
   })
-  const ownerOrgId = extractOwnerOrgId(record)
-  if (ownerOrgId == null || ownerOrgId !== caller.orgId) throw new ForbiddenError("No such record")
+  const owner = extractOwnerOrgId(record)
+  const owned = owner != null && owner === user.orgId
+  if (!owned) throw new AccessDeniedError("No such record") // same answer for "missing" and "not yours"
   return record
 }
 ```

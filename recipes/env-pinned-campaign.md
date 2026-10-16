@@ -7,8 +7,8 @@ dashboard per environment) and you'd rather pin the campaign id per environment 
 template/campaign discovery at runtime.
 **Routes:** n/a — reads an environment variable chosen by the already-resolved auth environment;
 no 1health call.
-**Reference code:** [`page.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/app/page.tsx#L6) (`getCampaignId`)
-**Seen in:** med-adherence (one BCBSM measure campaign per environment)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A medication-adherence app (one payer quality-measure campaign per environment)
 
 ## Pattern
 
@@ -23,14 +23,14 @@ no 1health call.
 ## Minimal example
 
 ```ts
-function getCampaignId(environment: string | undefined): number | null {
-  const raw =
-    environment === "prod" ? process.env.CAMPAIGN_ID_PROD :
-    environment === "demo" ? process.env.CAMPAIGN_ID_DEMO :
-    null
-  if (!raw) return null
-  const id = Number.parseInt(raw, 10)
-  return Number.isNaN(id) ? null : id
+// One env var per environment: no shared id, no cross-environment fallback.
+function pinnedCampaignIdFor(environment: string | undefined): number | null {
+  const raw = new Map([
+    ["prod", process.env.CAMPAIGN_ID_PROD],
+    ["demo", process.env.CAMPAIGN_ID_DEMO],
+  ]).get(environment ?? "")
+  const id = Number.parseInt(raw ?? "", 10)
+  return Number.isInteger(id) ? id : null   // null = missing/unparseable: the caller hard-stops
 }
 ```
 

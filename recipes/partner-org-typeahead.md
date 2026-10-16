@@ -8,9 +8,8 @@ invite, or address something to) instead of being handed a raw org id.
 [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
 · `GET /api/v2/organization/list?name=&address=&claimFilter=` (any org, incl. unclaimed shells) →
 [agents.md](https://agents.1health.io/public/prod/api/v2/organization/list/agents.md)
-**Reference code:** [`partners.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/partners.ts#L73) (tenant-wide search) ·
-[`query.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/api/query.ts#L153) (`fetchInvitableOrganizations`, campaign-scoped)
-**Seen in:** secure-share, med-adherence
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app, a medication-adherence app
 
 ## Pattern
 

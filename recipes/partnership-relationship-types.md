@@ -4,8 +4,8 @@
 Approved/Pending/Rejected status, a handful of relationship types (can order from, is a service
 provider for, etc.) can each be switched on or off without touching the others.
 **Routes:** `GET /api/v2/organization/partnership` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partnership/agents.md) (read) · `PUT /api/v2/organization/partnership/{orgId}/status` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partnership/_orgId_/status/agents.md) (overall status) · `PUT /api/v2/organization/partnership/{orgId}/service/{service}` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partnership/_orgId_/service/agents.md) (one relationship type)
-**Reference code:** [`partners.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/partners.ts#L73) (the read) — none public for the status/service toggles; see the Minimal example.
-**Seen in:** secure-share (the read); 1health platform usage (the status/service toggles)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app (the read); 1health platform usage (the status/service toggles)
 
 ## Pattern
 
@@ -31,7 +31,8 @@ provider for, etc.) can each be switched on or off without touching the others.
 ```ts
 import { callApi } from "@/lib/api"
 
-const REL_KEYS = [
+// The fixed platform vocabulary for `relKeys` — request only the ones your domain needs.
+const RELATIONSHIP_TYPES = [
   "OrganizationCanOrderFromOrganization",
   "OrganizationIsServiceProviderForOrganization",
   "OrganizationUsesServicesOfProviderOrganization",
@@ -40,10 +41,11 @@ const REL_KEYS = [
 
 // Read: one call powers "approved partners," "incoming invites," and "outgoing invites" alike.
 async function listPartnerships(direction: "Inbound" | "Outbound", status: string[]) {
-  const params = new URLSearchParams()
-  REL_KEYS.forEach((k) => params.append("relKeys", k))
-  status.forEach((s) => params.append("partnershipStatus", s))
-  params.set("direction", direction)
+  const params = new URLSearchParams([
+    ["direction", direction],
+    ...RELATIONSHIP_TYPES.map((type) => ["relKeys", type]),
+    ...status.map((s) => ["partnershipStatus", s]),
+  ])
   const res = await callApi<{ data: Array<{ organization: { id: number; name: string }; partnerships: Array<{ key: string; isActive: boolean }> }> }>(
     "partnership/list", `/api/v2/organization/partnership?${params}`,
   )

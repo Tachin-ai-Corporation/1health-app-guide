@@ -8,8 +8,8 @@ without changing anyone's 1health role.
 **Routes:** composes an existing read, `POST /api/v2/query` (see
 [query-the-data-graph.md](query-the-data-graph.md)), plus a resource-specific `GET .../configuration`
 call; the proxy itself is your own server route, not a new 1health route.
-**Reference code:** [`app/api/step-config/route.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/app/api/step-config/route.tsx#L86) · [`lib/api/step-subscriptions.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/step-subscriptions.ts#L347)
-**Seen in:** v0-1health-secure-share
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app
 
 ## Pattern
 

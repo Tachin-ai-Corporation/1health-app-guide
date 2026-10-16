@@ -5,8 +5,8 @@ acceptance stamp, a computed overlay — or you must produce one with no browser
 just letting someone save what's already on their own screen, see the last Gotcha — a client-side
 print often beats this.)
 **Routes:** composes existing reads, e.g. `GET /api/v2/agreement/{type}` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/agents.md) and `GET /api/v2/file/{id}/download` → [route docs](https://agents.1health.io/public/prod/api/manifest.md); the render/stamp step itself is local, not a 1health call.
-**Reference code:** [`lib/baa-stamp.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/baa-stamp.ts#L150) · [`app/api/baa/stamped/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/app/api/baa/stamped/route.ts#L29)
-**Seen in:** pcp-tcm (acceptance stamp on a legal agreement)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app (acceptance stamp on a legal agreement)
 
 > **Try 1health's own document generation first.** For a lab requisition, test-result report, or
 > branded requisition, 1health generates the PDF for you — see

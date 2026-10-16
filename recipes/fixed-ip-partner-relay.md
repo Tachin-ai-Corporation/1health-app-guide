@@ -6,8 +6,8 @@
 fixed egress address (most serverless hosts) — calls work, then fail on the next cold start.
 **Routes:** n/a — sits inside whatever server code already talks to the partner; no 1health route
 is involved.
-**Reference code:** [`lib/kno2/transport.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/kno2/transport.ts#L131)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 ## Pattern
 
@@ -24,11 +24,11 @@ is involved.
 ## Minimal example
 
 ```ts
-const ALLOWED_HOSTS = new Set(["api.partner.example.com"])
+const PARTNER_HOSTS = new Set(["api.partner.example.com"])
 
 export async function partnerFetch(url: string, init: RequestInit): Promise<Response> {
-  const target = new URL(url)
-  if (!ALLOWED_HOSTS.has(target.host)) throw new Error(`Refusing to relay to ${target.host}`)
+  const { host } = new URL(url)
+  if (!PARTNER_HOSTS.has(host)) throw new Error(`Refusing to relay to ${host}`)
 
   const relayUrl = process.env.PARTNER_RELAY_URL
   if (!relayUrl) return fetch(url, init) // no relay configured — call directly

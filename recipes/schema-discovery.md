@@ -4,8 +4,8 @@
 (a query builder, an admin UI, an export column mapper) — or you just need the exact `attrKey` /
 `relKey` string a query requires.
 **Routes:** `GET /api/v2/type/all` → [agents.md](https://agents.1health.io/public/prod/api/v2/type/all/agents.md) · `GET /api/v2/type/key/{typeName}` → [agents.md](https://agents.1health.io/public/prod/api/v2/type/key/agents.md) · `GET /api/v2/type/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v2/type/agents.md)
-**Reference code:** [`lib/api/schema.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/schema.ts) (canonical: cache + dedupe + prefetch) · [`lib/api/type-metadata.ts`](https://github.com/chill-tachin/v0-1h-query-helper/blob/main/lib/api/type-metadata.ts) (original production implementation)
-**Seen in:** query-helper (an engineer-facing query builder built entirely on this), trc-care-coordinator, and the app template baseline
+**Reference code:** [`lib/api/schema.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/schema.ts) (canonical: cache + dedupe + prefetch)
+**Seen in:** A query-builder tool (an engineer-facing query builder built entirely on this), a care-coordination app, and the app template baseline
 
 ## Pattern
 

@@ -4,8 +4,8 @@
 flow (intake, extraction, review) *before* it's certain the case will proceed — and you want to
 avoid creating throwaway or duplicate patient records for every abandoned draft.
 **Routes:** `POST /v3/patient` → [agents.md](https://agents.1health.io/public/prod/api/v3/patient/agents.md) · `POST /v2/person/upsert` → [agents.md](https://agents.1health.io/public/prod/api/v2/person/upsert/agents.md) · `POST /v2/person/{id}/medical-record` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · step commit via `POST /v2/journey/{id}/step/{stepId}/submit` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/_id_/step/_stepId_/submit/agents.md)
-**Reference code:** [`lib/expertdx/patient.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/patient.ts)
-**Seen in:** expertdx · 1health platform usage (staged-file flush)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app · 1health platform usage (staged-file flush)
 
 ## Pattern
 

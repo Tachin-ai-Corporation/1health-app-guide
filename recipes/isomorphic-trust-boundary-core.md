@@ -4,8 +4,8 @@
 
 **Use when:** the same query-building + response-parsing logic must run identically under two different credentials — the end user's own token in the browser, and a privileged service token in a server route — and the two must never drift apart.
 **Routes:** `POST /api/v2/query` → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md) (the shared module itself performs no I/O — see Pattern)
-**Reference code:** [`lib/api/step-resolution-core.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/step-resolution-core.ts) (the pure core) · [`app/api/step-config/route.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/app/api/step-config/route.tsx) (server caller) · [`lib/api/step-subscriptions.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/step-subscriptions.ts) (client caller)
-**Seen in:** secure-share
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app
 
 ## Pattern
 

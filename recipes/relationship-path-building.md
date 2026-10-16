@@ -4,8 +4,8 @@
 discovered schema metadata — especially when the relationship might be traversed **backwards**.
 **Routes:** n/a — client helper (consumes `GET /api/v2/type/key/{typeName}`; see
 [schema-discovery.md](schema-discovery.md))
-**Reference code:** [`lib/api/schema.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/schema.ts#L202) (`getRelationshipTargetType`, `formatRelationshipPath`) · [`lib/utils/type-helpers.ts`](https://github.com/chill-tachin/v0-1h-query-helper/blob/main/lib/utils/type-helpers.ts) (original direction-aware fix)
-**Seen in:** query-helper (where the direction bug was found and fixed); baked into the app
+**Reference code:** [`lib/api/schema.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/schema.ts#L202) (`getRelationshipTargetType`, `formatRelationshipPath`)
+**Seen in:** A query-builder tool (where the direction bug was found and fixed); baked into the app
 template baseline
 
 ## Pattern

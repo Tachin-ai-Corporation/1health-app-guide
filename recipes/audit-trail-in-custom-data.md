@@ -4,8 +4,8 @@
 
 **Use when:** you need an append-only, attributable history of events on a record (outreach attempts, status changes, corrections) that must never lose history — even once an entry is later found to be wrong.
 **Routes:** read via `POST /api/v2/query` (project `customData`) · write via `POST /api/v2/data/custom-data/bulk` → [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/bulk/agents.md)
-**Reference code:** [`lib/api/custom-data.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/custom-data.ts#L274) (patient notification log)
-**Seen in:** pcp-tcm (proof-of-contact outreach log, soft-deleted corrections)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app (proof-of-contact outreach log, soft-deleted corrections)
 
 ## Pattern
 

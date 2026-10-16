@@ -7,8 +7,8 @@ fire the trigger, then find out you're done by polling.
 [agents.md](https://agents.1health.io/public/prod/api/v2/journey/_id_/step/_stepId_/submit/agents.md)
 · poll via `POST /api/v2/query` (project `customData` only) →
 [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
-**Reference code:** [`use-notification-actions.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/components/task-components/shared/use-notification-actions.ts#L122)
-**Seen in:** trc-care-coordinator (PDF notification generation)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app (PDF notification generation)
 
 ## Pattern
 

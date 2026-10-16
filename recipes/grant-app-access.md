@@ -3,8 +3,8 @@
 **Use when:** an organization needs to be able to launch/see your **external application** — a
 private (`isPublic: false`) app refuses to launch for any organization not on its allow-list.
 **Routes:** `POST /api/v3/public/user/associate-if-registered?openApp={appId}` → [agents.md](https://agents.1health.io/public/prod/api/v3/public/user/associate-if-registered/agents.md) (primary, invite-time grant) · `PUT /api/v2/external-application/{appId}/allowed-organizations` (not yet in the published docs) (fallback, after the fact) · `POST /api/v3/health/grid/external-application/{appId}/allowed-organizations` (not yet in the published docs) (read-back — there is no GET)
-**Reference code:** [`lib/onehealth/allowed-organizations.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/onehealth/allowed-organizations.ts) · [`lib/expertdx/registration.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/registration.ts#L236)
-**Seen in:** med-adherence, expertdx, pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A medication-adherence app, a specialist-consult ordering app, a transitional-care app
 
 > **⚠ Not yet in 1health's published API docs:** `PUT /api/v2/external-application/{appId}/allowed-organizations`, `POST /api/v3/health/grid/external-application/{appId}/allowed-organizations`. 1health supports them for third-party apps, but agents.1health.io has no page for them yet — the shapes shown here come from working apps. Test them against demo before you rely on them.
 

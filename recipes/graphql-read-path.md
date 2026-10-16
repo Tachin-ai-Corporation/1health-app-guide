@@ -8,9 +8,9 @@ that screen, not just a fallback of last resort.
 **Routes:** `POST /api/graphql` → [agents.md](https://agents.1health.io/public/prod/api/graphql/agents.md)
 (a thin stub on the live docs — method + `query`/`variables`/`operationName` only; treat the
 examples below as the working reference)
-**Reference code:** [`lib/api/type-metadata.ts`](https://github.com/chill-tachin/v0-1h-query-helper/blob/main/lib/api/type-metadata.ts#L163) (introspection) · [`lib/api/tags.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/tags.ts#L32) (business-type query)
-**Seen in:** query-helper (introspects relationship-record attributes for its query builder),
-trc-care-coordinator (queries the `LabelTag` type for bulk tagging)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A query-builder tool (introspects relationship-record attributes for its query builder),
+a care-coordination app (queries the `LabelTag` type for bulk tagging)
 
 ## Pattern
 
@@ -71,7 +71,7 @@ async function fetchRelationAttributes(relationType: string) {
 }
 
 /** A first-class GraphQL business type — its own page/sort/filter shape. */
-async function fetchAllTags(tenantId: number) {
+async function listJourneyTags(tenantId: number) {
   const baseUrl = getOneHealthBaseUrl()
   const res = await authFetch(`${baseUrl}/api/graphql`, {
     method: "POST",

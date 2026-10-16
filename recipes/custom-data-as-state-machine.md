@@ -4,15 +4,15 @@
 
 **Use when:** a step's (or its journey's) own dynamic fields can't represent the state you need to track, so the state has to live somewhere else — and you need both "this step's own current state" and a cheap way to list many instances without re-reading every step.
 **Routes:** read via `POST /api/v2/query` (project `customData` on the step/journey instances) · write via `POST /api/v2/data/custom-data/bulk` → [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/bulk/agents.md)
-**Reference code:** [`lib/expertdx/case.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/case.ts#L389) (`writeNamespaced`) · [`rebuildJourneyIndex`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/case.ts#L722)
-**Seen in:** ExpertDx (the one example app whose workflow template ships with zero dynamic step-fields, forcing the whole case lifecycle into customData)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app (the one example app whose workflow template ships with zero dynamic step-fields, forcing the whole case lifecycle into customData)
 
 ## Pattern
 
 1. Pick one namespace key for your app's state on each involved instance (e.g. `appData.<appId>`), so a shallow `APPEND` of that one key round-trips your whole object safely.
 2. Treat each **step's own** `customData` as the source of truth for what happened at that step. Read it fresh rather than trusting in-memory state — another actor (a different plane of the same app, a manual fix) may have changed it.
 3. Maintain a small denormalized **index** — a summary object (phase, a few display fields, flags) — on the **parent** instance (the journey), updated whenever a step's data changes meaningfully. This makes list/dashboard reads cheap: one query over the parent type returns every row's status without fetching each step.
-4. Because the index is a cache, derive it with a **pure function** over the authoritative step data (e.g. `derivePhase(steps)`), and expose a `rebuild` operation that recomputes and rewrites it from scratch. Call `rebuild` whenever the index might have drifted — after a failed write, a manual data fix, or a template change.
+4. Because the index is a cache, derive it with a **pure function** over the authoritative step data (e.g. `deriveCasePhase(steps)`), and expose a `rebuild` operation that recomputes and rewrites it from scratch. Call `rebuild` whenever the index might have drifted — after a failed write, a manual data fix, or a template change.
 5. Every write is read → merge → write: read the current namespaced object, shallow-merge your patch into it in memory, then `APPEND` the whole merged object back. Never patch a nested key directly (see [read-write-custom-data.md](read-write-custom-data.md)). If the read fails, write nothing — `mergeCustomData` does all three steps and aborts on a failed read.
 6. Read and write with the **query type keys**: a journey instance is `"WorkflowTemplate"` and a step instance is `"WorkflowTemplateStep"`. `"Journey"` and `"Step"` don't exist (400 on demo).
 7. Guard which phase/step a given caller is allowed to write in code, not just in the UI — a state machine is only as trustworthy as its transition guard.
@@ -35,11 +35,16 @@ type CaseIndex = {
   attention?: "info_requested" | null
 }
 
+// Latest milestone first: the furthest completed step decides the phase.
+const PHASE_MILESTONES: ReadonlyArray<readonly [step: string, phase: CaseIndex["phase"]]> = [
+  ["Final review", "completed"],
+  ["Intake", "in_review"],
+]
+
 // Pure derivation over authoritative step data — this is what `rebuild` calls.
-function derivePhase(steps: Record<string, { status: string }>): CaseIndex["phase"] {
-  if (steps["Final review"]?.status === "Completed") return "completed"
-  if (steps["Intake"]?.status === "Completed") return "in_review"
-  return "draft"
+function deriveCasePhase(steps: Record<string, { status: string }>): CaseIndex["phase"] {
+  const reached = PHASE_MILESTONES.find(([step]) => steps[step]?.status === "Completed")
+  return reached ? reached[1] : "draft"
 }
 
 // Recompute the index from authoritative data and write it back — call after
@@ -47,7 +52,7 @@ function derivePhase(steps: Record<string, { status: string }>): CaseIndex["phas
 async function rebuildIndex(appId: string, journeyId: number, steps: Record<string, { status: string }>) {
   const read = await fetchCustomData("WorkflowTemplate", journeyId) // a journey's query type key
   if (!read.success) throw new Error(`Index not rebuilt: ${read.error}`) // it's a cache: retry later, never guess
-  const index: CaseIndex = { ...(read.data![NS] as any)?.[appId], phase: derivePhase(steps) }
+  const index: CaseIndex = { ...(read.data![NS] as any)?.[appId], phase: deriveCasePhase(steps) }
   const res = await mergeCustomData("WorkflowTemplate", journeyId, appData(appId, index))
   if (!res.success) throw new Error(`Index not rebuilt: ${res.error}`)
   return index

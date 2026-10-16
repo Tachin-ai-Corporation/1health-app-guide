@@ -8,8 +8,8 @@ production code path.
 **Routes:** n/a — diagnostic helper over `POST /api/v2/query` (resolve the step tree) →
 [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md) + `GET /api/v2/health/workflow-template/{templateId}/step/{stepId}/configuration`
 → [route docs](https://agents.1health.io/public/prod/api/manifest.md)
-**Reference code:** [`webhook-diagnostics.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/webhook-diagnostics.ts#L178)
-**Seen in:** secure-share (console-only debug tool, not wired into production UI)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app (console-only debug tool, not wired into production UI)
 
 ## Pattern
 

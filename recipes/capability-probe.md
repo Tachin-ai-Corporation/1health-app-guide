@@ -4,8 +4,8 @@
 
 **Use when:** you're not sure what a given credential (a partner/provider's own token, a scoped API key) actually can and can't do against the platform, and getting it wrong in either direction is expensive — silently over-trusting it is a security hole, silently under-trusting it means routing everything through a privileged key you didn't need.
 **Routes:** n/a — this calls whichever real routes you're uncertain about, directly; consult [manifest.md](https://agents.1health.io/public/prod/api/manifest.md) for the full route list to probe against.
-**Reference code:** [`components/dev/plane-check.tsx`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/components/dev/plane-check.tsx)
-**Seen in:** expertdx
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 

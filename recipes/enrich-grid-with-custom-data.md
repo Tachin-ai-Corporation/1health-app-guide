@@ -5,8 +5,8 @@
 a second round trip instead of reading `customData` per row.
 **Routes:** grid page via `POST /api/v3/health/grid/<view>` (see grid-list-views.md) · customData
 read-many via `POST /api/v2/data/custom-data` → [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/agents.md)
-**Reference code:** [`lib/api/custom-data.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/api/custom-data.ts#L862) (`fetchCustomDataBulk`) · [`provider-dashboard.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/components/provider-dashboard/provider-dashboard.tsx#L404) (the join) · [`lib/api/campaign.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/api/campaign.ts#L45) (the grid call)
-**Seen in:** med-adherence-bcbsm (provider dashboard: journey grid + per-patient measure data)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A medication-adherence app (provider dashboard: journey grid + per-patient measure data)
 
 ## Pattern
 

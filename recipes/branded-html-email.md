@@ -4,8 +4,8 @@
 brand color, a wordmark, a button. Or a send through `/v2/email/send/html` comes back **403 with an
 HTML page** instead of a 1health JSON error.
 **Routes:** `POST /api/v2/email/send/html` → [agents.md](https://agents.1health.io/public/prod/api/v2/email/send/html/agents.md)
-**Reference code:** [`lib/email/layout.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/email/layout.ts) (the renderer and its firewall guard) · [`scripts/verify-email-layout.mjs`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/scripts/verify-email-layout.mjs) (tests)
-**Seen in:** expertdx (practice invitations, email notifications). The firewall behavior was measured
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app (practice invitations, email notifications). The firewall behavior was measured
 on production (`app.1health.io`) on 2026-10-16; check it against demo before relying on it there.
 
 ## Pattern
@@ -54,48 +54,60 @@ on production (`app.1health.io`) on 2026-10-16; check it against demo before rel
 
 ```ts
 // One renderer for every email: escaped text, legacy attributes only, checked before sending.
-const BRAND = { primary: "#12332f", accent: "#e8765a", tint: "#f3f6f3", ink: "#26332f", muted: "#66766f" }
-const SANS = "Arial, Helvetica, sans-serif"
+const THEME = { brand: "#1f4e79", action: "#c0532b", backdrop: "#f2f4f7", text: "#2a2e33", quiet: "#6b7280" }
+const FACE = "Arial, Helvetica, sans-serif"
 
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!)
+const ENTITY: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }
+const escapeText = (value: string) => value.replace(/[&<>"']/g, (ch) => ENTITY[ch])
 
-/** What the firewall refuses (403), so you find out in tests instead. */
-export function firewallProblem(html: string): string | null {
-  if (/style\s*=/i.test(html)) return "a style attribute"
-  if (/<style[\s>]/i.test(html)) return "a <style> block"
-  if (/<!doctype/i.test(html)) return "a doctype"
-  return null
+// The only tag writer. It escapes attribute values; `inner` must already be markup.
+type Attrs = Record<string, string | number>
+const tag = (name: string, attrs: Attrs = {}, inner = "") =>
+  `<${name}${Object.entries(attrs).map(([k, v]) => ` ${k}="${escapeText(String(v))}"`).join("")}>${inner}</${name}>`
+
+// A one-cell table: the layout primitive every mail client agrees on.
+const block = (inner: string, table: Attrs = {}, cell: Attrs = {}) =>
+  tag("table", { cellpadding: 0, cellspacing: 0, border: 0, ...table }, tag("tr", {}, tag("td", cell, inner)))
+const font = (text: string, attrs: Attrs) => tag("font", { face: FACE, ...attrs }, escapeText(text))
+
+const band = () => block("", { width: "100%" }, { bgcolor: THEME.brand, height: 6 })
+const wordmark = (name: string) => font(name, { face: "Georgia, serif", size: 5, color: THEME.brand })
+const heading = (text: string) => tag("h2", {}, font(text, { color: THEME.brand }))
+const paragraph = (text: string) => tag("p", {}, font(text, { size: 3, color: THEME.text }))
+// A colored cell around the link; the <font> inside the <a> sets the link's text color.
+const button = (label: string, href: string) =>
+  block(tag("a", { href }, tag("font", { face: FACE, size: 3, color: "#ffffff" }, tag("b", {}, escapeText(label)))),
+    { cellpadding: 13 }, { bgcolor: THEME.action, align: "center" })
+const footer = (text: string) =>
+  block(font(text, { size: 2, color: THEME.quiet }), { width: "100%", cellpadding: 20 }, { bgcolor: THEME.backdrop })
+
+/** Markup the firewall answers with a 403 — caught here, so you find out in tests instead. */
+const REFUSED_MARKUP: Array<[pattern: RegExp, what: string]> = [
+  [/style\s*=/i, "a style attribute"],
+  [/<style[\s>]/i, "a <style> block"],
+  [/<!doctype/i, "a doctype"],
+]
+
+export function rejectRefusedMarkup(html: string): string {
+  const hit = REFUSED_MARKUP.find(([pattern]) => pattern.test(html))
+  if (hit) throw new Error(`1health's email firewall would refuse this: it has ${hit[1]}`)
+  return html
 }
 
-export function renderEmail(o: {
+export function buildEmailHtml(email: {
   heading: string
   body: string[]
   button: { label: string; href: string }
   footer: string
 }): string {
-  const para = (t: string) => `<p><font face="${SANS}" size="3" color="${BRAND.ink}">${esc(t)}</font></p>`
-  const html =
-    `<html><body bgcolor="${BRAND.tint}">` +
-    `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BRAND.tint}"><tr><td align="center"><br>` +
-    `<table width="560" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff">` +
-    `<tr><td bgcolor="${BRAND.primary}" height="6"></td></tr>` + // brand band
-    `<tr><td><table width="100%" cellpadding="28" cellspacing="0" border="0"><tr><td>` +
-    `<font face="Georgia, serif" size="5" color="${BRAND.primary}">YourApp</font>` + // wordmark
-    `<h2><font face="${SANS}" color="${BRAND.primary}">${esc(o.heading)}</font></h2>` +
-    o.body.map(para).join("") +
-    // Button: a colored cell around the link; <font> inside the <a> sets the link's text color.
-    `<table cellpadding="13" cellspacing="0" border="0"><tr><td bgcolor="${BRAND.accent}" align="center">` +
-    `<a href="${esc(o.button.href)}"><font face="${SANS}" size="3" color="#ffffff"><b>${esc(o.button.label)}</b></font></a>` +
-    `</td></tr></table>` +
-    `</td></tr></table></td></tr>` +
-    `<tr><td bgcolor="${BRAND.tint}"><table width="100%" cellpadding="20" cellspacing="0" border="0"><tr><td>` +
-    `<font face="${SANS}" size="2" color="${BRAND.muted}">${esc(o.footer)}</font>` + // footer
-    `</td></tr></table></td></tr>` +
-    `</table><br></td></tr></table></body></html>`
-  const problem = firewallProblem(html)
-  if (problem) throw new Error(`1health's email firewall would refuse this: it has ${problem}`)
-  return html
+  const main = block(
+    wordmark("YourApp") + heading(email.heading) + email.body.map(paragraph).join("") +
+      button(email.button.label, email.button.href),
+    { width: "100%", cellpadding: 28 },
+  )
+  const card = block(band() + main + footer(email.footer), { width: 560, bgcolor: "#ffffff" })
+  const page = block(`<br>${card}<br>`, { width: "100%", bgcolor: THEME.backdrop }, { align: "center" })
+  return rejectRefusedMarkup(tag("html", {}, tag("body", { bgcolor: THEME.backdrop }, page)))
 }
 
 /** Server-side send. Exactly these three fields; one recipient per call. */

@@ -3,8 +3,8 @@
 **Use when:** you need every row of a `/query` result, or a specific order, and can't rely on the
 platform's default order alone.
 **Routes:** `POST /api/v2/query` → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md) (same route as [query-the-data-graph.md](query-the-data-graph.md))
-**Reference code:** [`lib/api/payer-record-query.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/payer-record-query.ts#L120)
-**Seen in:** pcp-transitional-care-management (written specifically to fix a "newest records never
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app (written specifically to fix a "newest records never
 seen" bug on a long-lived feed)
 
 ## Pattern

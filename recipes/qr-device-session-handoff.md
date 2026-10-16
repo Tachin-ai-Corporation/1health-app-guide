@@ -4,8 +4,8 @@
 
 **Use when:** an already-authenticated device needs a second device (typically a phone camera) to act under the **same session** for one short task, with no separate login on the second device and no backend session store of your own.
 **Routes:** app-owned hand-off routes; the underlying 1health write is a top-level `POST /api/v2/data/custom-data/bulk` APPEND → [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/bulk/agents.md) (the matching single-instance read is a sibling endpoint — see [manifest.md](https://agents.1health.io/public/prod/api/manifest.md) if you need its exact shape)
-**Reference code:** [`lib/mobile/ticket.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/mobile/ticket.ts) + [`crypto.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/mobile/crypto.ts) · ExpertDx variant: [`lib/mobile/ticket.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/mobile/ticket.ts) + [`crypto.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/mobile/crypto.ts)
-**Seen in:** pcp-tcm, expertdx
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app, a specialist-consult ordering app
 
 ## Pattern
 
@@ -18,23 +18,32 @@
 ## Minimal example
 
 ```ts
+import { randomBytes } from "node:crypto"
+
+const HANDOFF_KEY = "deviceHandoff" // its own top-level customData key, a sibling of appData
+const HANDOFF_TTL_MS = 10 * 60_000
+
 // mint — runs on the authenticated device's own server-side session
-const nonce = randomBytes(32).toString("base64url")
-await appendTopLevelKey(caller, recordId, "captureTicket", { nonce, exp: Date.now() + 10 * 60_000, used: false })
-const sealed = sealJson(sessionBundle)                       // AES-256-GCM, HKDF-derived key
-const qrUrl = `${appUrl}/capture/${recordId}#${sealed}`      // fragment — never sent to any server
+export async function mintHandoffLink(owner: ServerCaller, recordId: number, session: HandoffSession) {
+  const nonce = randomBytes(32).toString("base64url")
+  const ticket = { nonce, expiresAt: Date.now() + HANDOFF_TTL_MS, used: false } // never the session itself
+  await appendTopLevelKey(owner, recordId, HANDOFF_KEY, ticket) // replaces any older ticket on the record
+  const fragment = encryptForLink(session) // AES-256-GCM, HKDF-derived key
+  return `${appUrl}/handoff/${recordId}#${fragment}` // fragment — never sent to any server
+}
 
 // redeem — server-only; no client session exists yet, so this rebuilds one from the seal
-export async function redeemTicket(recordId: number, nonce: string, sealed: string) {
-  const bundle = openJson<SessionBundle>(sealed)
-  if (!bundle) return { ok: false, status: "corrupt" } as const
-  const caller = callerFromBundle(bundle)                    // the RECOVERED session reads its own record
-  const ticket = await readTopLevelKey(caller, recordId, "captureTicket")
-  if (!ticket || ticket.used || Date.now() > ticket.exp || ticket.nonce !== nonce) {
-    return { ok: false, status: "invalid" } as const
-  }
-  await appendTopLevelKey(caller, recordId, "captureTicket", { ...ticket, used: true })  // burn FIRST
-  return { ok: true, bundle } as const
+export async function redeemHandoff(recordId: number, nonce: string, fragment: string) {
+  const session = decryptFromLink<HandoffSession>(fragment) // null on ANY decrypt failure, never throws
+  if (!session) return { ok: false, status: "corrupt" } as const
+
+  const owner = toServerCaller(session) // the RECOVERED session reads its own record
+  const ticket = await readTopLevelKey(owner, recordId, HANDOFF_KEY)
+  const redeemable = !!ticket && !ticket.used && ticket.nonce === nonce && Date.now() <= ticket.expiresAt
+  if (!redeemable) return { ok: false, status: "invalid" } as const
+
+  await appendTopLevelKey(owner, recordId, HANDOFF_KEY, { ...ticket, used: true }) // burn FIRST
+  return { ok: true, session } as const
 }
 ```
 

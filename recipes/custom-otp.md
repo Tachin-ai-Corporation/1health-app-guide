@@ -4,8 +4,8 @@
 
 **Use when:** the platform's own OTP endpoints (`/api/v3/otp/*`) reject your app's credentials — measured 403 on both a user token and a service key — but you still need a short-code verification step, e.g. proving a caller controls a phone number before texting a session-bearing link to it.
 **Routes:** `POST /api/v2/twilio/send` (delivery — see [native-email-and-sms.md](native-email-and-sms.md)) · `POST /api/v2/health/contact-point` · `POST /api/v2/data/custom-data/bulk` — the OTP mint/verify step itself is **not** a 1health call (see Gotchas); confirm the current state of `/api/v3/otp/*` via the [manifest](https://agents.1health.io/public/prod/api/manifest.md) before assuming it's unusable for you too.
-**Reference code:** [`lib/mobile/verify.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/mobile/verify.ts)
-**Seen in:** expertdx
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 
@@ -31,11 +31,11 @@ import { authFetch, getOneHealthBaseUrl } from "@/lib/auth-client"
 
 // 1. Mint a code server-side, seal it (+ phone, expiry) into an httpOnly cookie,
 //    then deliver it — the code itself never touches 1health.
-async function sendVerificationCode(phoneE164: string, code: string): Promise<boolean> {
-  const baseUrl = getOneHealthBaseUrl()
-  const response = await authFetch(`${baseUrl}/api/v2/twilio/send`, {
+async function textOneTimeCode(phoneE164: string, code: string): Promise<boolean> {
+  const sms = { toPhoneNumber: phoneE164, text: `One-time code: ${code} (valid for 10 minutes)` }
+  const response = await authFetch(`${getOneHealthBaseUrl()}/api/v2/twilio/send`, {
     method: "POST",
-    body: JSON.stringify({ toPhoneNumber: phoneE164, text: `Your code is ${code}. Expires in 10 minutes.` }),
+    body: JSON.stringify(sms),
   })
   return response.ok
 }
@@ -43,13 +43,11 @@ async function sendVerificationCode(phoneE164: string, code: string): Promise<bo
 // 2. On a correct submit against the sealed cookie: create the contact point,
 //    then cache a verified marker under the user's own appData (RMW — see
 //    read-write-custom-data.md).
-async function recordVerifiedMobile(personId: number, phoneE164: string) {
-  const baseUrl = getOneHealthBaseUrl()
-  await authFetch(`${baseUrl}/api/v2/health/contact-point`, {
+async function markPhoneVerified(personId: number, phoneE164: string) {
+  const mobile = { label: "Personal", type: "Mobile", value: phoneE164, phoneNumberRegion: "us" }
+  await authFetch(`${getOneHealthBaseUrl()}/api/v2/health/contact-point`, {
     method: "POST",
-    body: JSON.stringify({
-      contactPointsToAdd: [{ label: "Personal", type: "Mobile", value: phoneE164, phoneNumberRegion: "us" }],
-    }),
+    body: JSON.stringify({ contactPointsToAdd: [mobile] }),
   })
   // ...then read current appData and APPEND { mobile: { phoneE164, verifiedAt: Date.now() } }.
 }

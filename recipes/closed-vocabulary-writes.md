@@ -2,8 +2,8 @@
 
 **Use when:** a write endpoint validates a field against a closed, admin-configured vocabulary (an enum-like value defined server-side, not in your code), and you're writing a value from an external or less-curated source that might not (yet) be recognized.
 **Routes:** varies by field — e.g. `POST /api/v2/person/{id}/medical-record` → [manifest](https://agents.1health.io/public/prod/api/manifest.md); the technique applies to any write whose field is validated against a closed vocabulary
-**Reference code:** [`lib/api/medical-record.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/medical-record.ts#L162) (`parseMissingEvidenceDefinitions`) · [`createMedicalRecord`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/medical-record.ts#L309)
-**Seen in:** pcp-tcm, expertdx (both attach externally-sourced clinical data through a closed-vocabulary field)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app, a specialist-consult ordering app (both attach externally-sourced clinical data through a closed-vocabulary field)
 
 ## Pattern
 

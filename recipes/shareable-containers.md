@@ -9,9 +9,8 @@ the user-facing concept.
 [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/agents.md) →
 `.../run` (activate) → `.../share` (see F1) → `POST /api/v3/health/grid/workflow-campaign`
 (list / duplicate check) → [agents.md](https://agents.1health.io/public/prod/api/v3/health/grid/workflow-campaign/agents.md)
-**Reference code:** [`containers.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/containers.ts#L111) ·
-[`create-container-flow.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/create-container-flow.ts#L41)
-**Seen in:** secure-share
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app
 
 ## Pattern
 

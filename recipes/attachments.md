@@ -2,8 +2,8 @@
 
 **Use when:** you need to attach a file to a record — a free-standing upload distinct from a step's own `fileUpload` dynamic field — and later list, download, or delete it.
 **Routes:** `POST /api/v2/health/type/_EntityType_/_id_/relation/_RelationName_/file/upload` — generic typed-entity relation upload; confirm the exact shape via the [manifest](https://agents.1health.io/public/prod/api/manifest.md) (two dynamic segments beyond the id, so don't trust a guessed `agents.md` link) · `GET /api/v2/journey/_journeyId_/documents` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · `GET /api/v2/file/all/_typeKey_/_instanceId_` (repeatable `relKeys` param) → [agents.md](https://agents.1health.io/public/prod/api/v2/file/all/agents.md) · `GET /api/v2/file/_fileId_/download` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · `POST /api/v2/file/_fileId_/version` → [agents.md](https://agents.1health.io/public/prod/api/v2/file/_fileInstanceId_/version/agents.md) · `DELETE /api/v2/file/_fileId_` → [route docs](https://agents.1health.io/public/prod/api/manifest.md)
-**Reference code:** [`lib/api/journey-attachments.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/journey-attachments.ts) · [`lib/api/files.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/files.ts)
-**Seen in:** trc-care-coordinator (also a template-baseline capability; seen too in secure-share) · 1health platform usage (multi-relation listing, versions, WAF workaround)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app (also a template-baseline capability; seen too in a secure file-sharing app) · 1health platform usage (multi-relation listing, versions, WAF workaround)
 
 ## Pattern
 

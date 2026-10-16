@@ -4,8 +4,8 @@
 session, a subdomain, a tenant id, or an organization id — and picking the wrong read either 404s
 or silently returns the wrong record's shape.
 **Routes:** `GET /api/v2/tenant` → [agents.md](https://agents.1health.io/public/prod/api/v2/tenant/agents.md) (own tenant, authenticated) · `GET /api/v2/public/tenant/config` → [agents.md](https://agents.1health.io/public/prod/api/v2/public/tenant/config/agents.md) (public, by subdomain) · `GET /api/v2/tenant/sys-config` → [agents.md](https://agents.1health.io/public/prod/api/v2/tenant/sys-config/agents.md) (batch, by tenant id) · `GET /api/v2/organization/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/agents.md) (by organization id)
-**Reference code:** [`organization-list.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/onehealth/organization-list.ts#L666) (the by-organization-id read) — none public for the other three reads; see the Minimal example.
-**Seen in:** med-adherence (by-organization-id read); 1health platform usage (the other three)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A medication-adherence app (by-organization-id read); 1health platform usage (the other three)
 
 ## Pattern
 
