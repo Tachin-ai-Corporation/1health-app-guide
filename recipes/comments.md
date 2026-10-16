@@ -2,8 +2,8 @@
 
 **Use when:** you need a lightweight discussion thread on a journey — case notes, coordination chatter — without inventing your own comment type.
 **Routes:** list via `POST /api/v3/health/grid/comment` → [agents.md](https://agents.1health.io/public/prod/api/v3/health/grid/comment/agents.md) · post via `POST /api/v2/journey/_journeyId_/comment` → [route docs](https://agents.1health.io/public/prod/api/manifest.md)
-**Reference code:** [`lib/api/journey-comments.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/journey-comments.ts)
-**Seen in:** trc-care-coordinator (also a template-baseline capability; seen too in med-adherence)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app (also a template-baseline capability; seen too in a medication-adherence app)
 
 ## Pattern
 

@@ -4,8 +4,8 @@
 than fit on one page, and the export must include everything matching, not just what's currently
 loaded on screen.
 **Routes:** `POST /api/v2/query` → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md) (same route as [query-the-data-graph.md](query-the-data-graph.md)) · fallback: `POST /api/v3/health/grid/<view>` → [agents.md](https://agents.1health.io/public/prod/api/v3/health/grid/journey/agents.md) (per view)
-**Reference code:** [`lib/api/payer-record-query.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/payer-record-query.ts#L120) (the offset-loop mechanic this builds on) · [`lib/api/grid.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/grid.ts) (the grid-paging fallback)
-**Seen in:** pcp-transitional-care-management (the offset loop); the grid-paging fallback is the
+**Reference code:** [`lib/api/grid.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/grid.ts) (the grid-paging fallback)
+**Seen in:** A transitional-care app (the offset loop); the grid-paging fallback is the
 same mechanism as [grid-list-views.md](grid-list-views.md)
 
 ## Pattern

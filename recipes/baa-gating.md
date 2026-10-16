@@ -2,8 +2,8 @@
 
 **Use when:** your app handles PHI and must not let an organization proceed until it has accepted 1health's Business Associate Agreement — an entry gate checked at login/first load, with the accepted document available to view afterward. The same mechanism also gates other agreement kinds (e.g. Terms & Conditions) under a different `type` string, so the pattern below applies there too.
 **Routes:** `GET /api/v2/agreement/_type_` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/agents.md) · `PUT /api/v2/agreement/_type_/accept` → [agents.md](https://agents.1health.io/public/prod/api/v2/agreement/_type_/accept/agents.md)
-**Reference code:** [`lib/api/baa.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/baa.ts) · [`app/api/baa/stamped/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/app/api/baa/stamped/route.ts) · [`lib/baa-stamp.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/baa-stamp.ts)
-**Seen in:** pcp-tcm, expertdx, patient-vault
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app, a specialist-consult ordering app, patient-vault
 
 ## Pattern
 
@@ -18,31 +18,31 @@
 ```ts
 import { authFetch, getOneHealthBaseUrl } from "@/lib/auth-client"
 
-const BAA_TYPE = "BAA Organization Standard"
+// The 1health agreement type — agreements are looked up by this name, not a numeric id.
+const AGREEMENT_TYPE = "BAA Organization Standard"
 
-interface BaaAgreement {
-  id: number
-  accepted: boolean
-}
+const agreementUrl = (suffix = "") =>
+  `${getOneHealthBaseUrl()}/api/v2/agreement/${encodeURIComponent(AGREEMENT_TYPE)}${suffix}`
+
+type AgreementRow = { id?: unknown; state?: { accepted?: unknown } }
+type GateState =
+  | { status: "accepted" | "not-accepted"; agreementId: number }
+  | { status: "unknown" } // read failed or no agreement found — treated exactly like "not accepted"
 
 // GATE CHECK — read on the caller's own token.
-async function fetchBaaAgreement(): Promise<BaaAgreement | null> {
-  const baseUrl = getOneHealthBaseUrl()
-  const response = await authFetch(`${baseUrl}/api/v2/agreement/${encodeURIComponent(BAA_TYPE)}`)
-  if (!response.ok) return null // fail closed: caller shows the gate
-  const raw = await response.json()
-  const row = Array.isArray(raw) ? raw[0] : raw
-  if (typeof row?.id !== "number") return null
-  return { id: row.id, accepted: row.state?.accepted === true }
+async function readGateState(): Promise<GateState> {
+  const response = await authFetch(agreementUrl())
+  if (!response.ok) return { status: "unknown" } // fail closed: show the gate
+  // One agreement or a list of them — take the first either way.
+  const [agreement] = [await response.json()].flat() as Array<AgreementRow | undefined>
+  if (typeof agreement?.id !== "number") return { status: "unknown" }
+  return { status: agreement.state?.accepted === true ? "accepted" : "not-accepted", agreementId: agreement.id }
 }
 
-// ACCEPT — id comes from the read above, never invented client-side.
-async function acceptBaa(agreementId: number): Promise<boolean> {
-  const baseUrl = getOneHealthBaseUrl()
-  const response = await authFetch(
-    `${baseUrl}/api/v2/agreement/${encodeURIComponent(BAA_TYPE)}/accept?hipaaCoveredEntity=true`,
-    { method: "PUT", body: JSON.stringify({ ids: [agreementId] }) },
-  )
+// ACCEPT — the id comes from the gate read above, never invented client-side.
+async function submitBaaAcceptance(agreementId: number): Promise<boolean> {
+  const body = JSON.stringify({ ids: [agreementId] })
+  const response = await authFetch(`${agreementUrl("/accept")}?hipaaCoveredEntity=true`, { method: "PUT", body })
   return response.ok
 }
 ```

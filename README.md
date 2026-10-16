@@ -25,13 +25,21 @@ Or `git clone` this repo so the LLM can grep the whole tree locally (the recomme
 | **Recipes** (the *how*) | [`recipes/`](recipes/) | Abstract, reusable patterns. Start at [`recipes/INDEX.md`](recipes/INDEX.md). |
 | **API** (the *tactical*) | [`api/`](api/) | A bridge to the live per-route docs at `agents.1health.io` (not duplicated here). |
 
+## Contributing
+
+This repo is public. Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing it: nothing here may
+link to, name, or copy from a private repo, and every example is an original, abstract
+illustration.
+
 ## Sources it's distilled from
 
 - **Reference app / template:** [`v0-1h-app-template`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template) — the canonical setup and typed API layer.
 - **Live API docs:** [`agents.1health.io`](https://agents.1health.io/public/prod/llms.txt) — auto-generated, 474 routes.
-- **Example apps** (mined for recipes): expertdx-ordering-provider, v0-trc-care-coordinator,
-  pcp-transitional-care-management, med-adherence-bcbsm, v0-1h-query-helper, secure-share,
-  patient-vault-official.
+- **Example apps** (mined for recipes): seven apps built on 1health — care coordination,
+  transitional care, specialist-consult ordering, medication adherence, secure file sharing, a query
+  builder, and [patient-vault](https://github.com/Tachin-ai-Corporation/patient-vault-official).
+  Most are private, so recipes abstract them into patterns and placeholder code, and never link,
+  name, or copy from them.
 - **1health platform usage** — how 1health's own product uses its API, abstracted into patterns
   (no code) and checked against the published docs.
 - **Live checks on demo** — request shapes, sentinels, operators, and lifecycles exercised against
@@ -39,7 +47,7 @@ Or `git clone` this repo so the LLM can grep the whole tree locally (the recomme
 
 ## Status
 
-**Published — `guide_version` 0.5.2 (draft).** Setup docs plus ~125 recipes across 14 categories,
+**Published — `guide_version` 0.5.3 (draft).** Setup docs plus ~125 recipes across 14 categories,
 including:
 - a QA standard: sign in as each role on local and dev/stage builds;
 - a population-health section: the command center, covering cohorts, snapshots, and

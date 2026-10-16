@@ -2,8 +2,8 @@
 
 **Use when:** you need to send a transactional email or SMS from the app — notifications, confirmations, a staff-alert widget — without standing up a third-party mailer.
 **Routes:** `POST /api/v2/email/send` → [agents.md](https://agents.1health.io/public/prod/api/v2/email/send/agents.md) · `POST /api/v2/twilio/send` → [agents.md](https://agents.1health.io/public/prod/api/v2/twilio/send/agents.md)
-**Reference code:** [`app/api/feedback/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/app/api/feedback/route.ts) (email) · [`lib/mobile/verify.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/mobile/verify.ts) (SMS)
-**Seen in:** pcp-tcm, expertdx (med-adherence uses SendGrid instead — see [anti-patterns.md](../setup/anti-patterns.md))
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app, a specialist-consult ordering app (another example app used a third-party mailer instead — see [anti-patterns.md](../setup/anti-patterns.md))
 
 ## Pattern
 
@@ -17,27 +17,26 @@
 
 ```ts
 // Server route: relay a signed-in user's message as email.
-// `getCaller()` is your own session helper — resolves the request's cookie to
-// { accessToken, baseUrl }; it is not a 1health call.
-export async function POST(request: Request) {
-  const caller = await getCaller()
-  if (!caller) return Response.json({ error: "Not signed in." }, { status: 401 })
+// `getSignedInUser()` is your own session helper — resolves the request's cookie to
+// { accessToken, baseUrl }, or null; it is not a 1health call.
+export async function POST(req: Request) {
+  const user = await getSignedInUser()
+  if (!user) return Response.json({ error: "Sign in first." }, { status: 401 })
 
-  const { message } = await request.json()
+  const { message } = await req.json()
+  // EXACTLY these three fields — an extra field has 500'd this endpoint in production.
+  const email = {
+    subject: "App notification",
+    text: message,
+    userEmail: "recipient@example.com", // the RECIPIENT, not the sender
+  }
 
-  const response = await fetch(`${caller.baseUrl}/api/v2/email/send`, {
+  const sent = await fetch(`${user.baseUrl}/api/v2/email/send`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${caller.accessToken}`, "Content-Type": "application/json" },
-    // EXACTLY these three fields — an extra field has 500'd this endpoint in production.
-    body: JSON.stringify({
-      subject: "App notification",
-      text: message,
-      userEmail: "recipient@example.com", // the RECIPIENT, not the sender
-    }),
+    headers: { Authorization: `Bearer ${user.accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(email),
   })
-
-  if (!response.ok) return Response.json({ error: "Send failed." }, { status: 502 })
-  return Response.json({ ok: true })
+  return sent.ok ? Response.json({ ok: true }) : Response.json({ error: "Send failed." }, { status: 502 })
 }
 ```
 
@@ -68,5 +67,5 @@ async function sendSms(toPhoneE164: string, text: string): Promise<boolean> {
 - [branded-html-email.md](branded-html-email.md) — sending HTML through `/v2/email/send/html`: branded
   layouts with no CSS, and why a send can 403 with an HTML page.
 - [custom-otp.md](custom-otp.md) — builds SMS delivery into a self-rolled verification flow when platform OTP itself isn't usable.
-- [anti-patterns.md](../setup/anti-patterns.md) — the SendGrid deviation this recipe replaces.
+- [anti-patterns.md](../setup/anti-patterns.md) — the third-party-mailer deviation this recipe replaces.
 - Concepts: [setup/rules-of-the-road.md](../setup/rules-of-the-road.md).

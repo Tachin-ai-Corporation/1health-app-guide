@@ -9,8 +9,8 @@ usable (not corrupted) journey behind, and a way to retire one that was abandone
 · `POST /api/v2/data/custom-data/bulk` (persist derived facts) →
 [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/bulk/agents.md) ·
 `PUT /api/v2/journey/uat` (retire) → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/uat/agents.md)
-**Reference code:** [`journey.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/journey.ts#L933) (`createDischargeJourney`, `setJourneyUat` at [L105](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/journey.ts#L105))
-**Seen in:** pcp-tcm (discharge intake orchestration)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app (discharge intake orchestration)
 
 ## Pattern
 

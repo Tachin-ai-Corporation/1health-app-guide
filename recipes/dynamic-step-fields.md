@@ -4,8 +4,8 @@
 to read/write **without hardcoding a per-environment id** — the common case any time you touch a
 step's dynamic fields at all.
 **Routes:** `GET /api/v2/journey/{id}/step/{stepId}/info` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/_id_/step/_stepId_/info/agents.md) (the running instance) — or, before a journey exists, `GET /api/v2/health/workflow-template/{templateId}/step/{stepId}/configuration` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-template/_id_/step/_stepId_/configuration/agents.md). Resolution itself is a client-side helper, not a route.
-**Reference code:** [`lib/api/workflow-template.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/workflow-template.ts) · [`lib/api/container-journeys.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/container-journeys.ts) (resolve-by-type variant)
-**Seen in:** most example apps (template baseline; secure-share resolves by type)
+**Reference code:** [`lib/api/workflow-template.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/workflow-template.ts)
+**Seen in:** most example apps (template baseline; a secure file-sharing app resolves by type)
 
 ## Pattern
 

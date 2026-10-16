@@ -4,8 +4,8 @@
 active tenant/admin) and whether it's partnered with you — without ever leaking un-partnered
 contact PII to the browser.
 **Routes:** `GET /api/v2/organization/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/list/agents.md) (search) · `GET /api/v2/organization/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/agents.md) (authoritative per-org `claimed` flag)
-**Reference code:** [`lib/onehealth/organization-list.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/onehealth/organization-list.ts#L666) (`fetchOrgIsClaimed`, `fetchClaimStatus`) · [`app/api/invite/claim-status/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/app/api/invite/claim-status/route.ts)
-**Seen in:** med-adherence
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A medication-adherence app
 
 ## Pattern
 
@@ -27,23 +27,39 @@ contact PII to the browser.
 ## Minimal example
 
 ```ts
-async function getClaimStatus(orgName: string, myTenantId: string) {
-  const list = await callApi<{ data: OrgListRow[] }>(
+import { callApi } from "@/lib/api"
+
+interface OrgSearchHit {
+  organization?: { id?: number; name?: string; partnershipStatus?: unknown; personContacts?: unknown[] }
+}
+
+const normalizedName = (name = "") => name.trim().toLowerCase()
+
+/** Exact (trimmed, case-insensitive) name match — never just the first fuzzy hit. */
+async function findOrgByExactName(orgName: string) {
+  const res = await callApi<{ data: OrgSearchHit[] }>(
     "org/claim-status.search",
     `/api/v2/organization/list?name=${encodeURIComponent(orgName)}&claimFilter=claim-and-pending&page=0&size=8`,
   )
-  const rows = list.success ? (list.data?.data ?? []) : []
-  const match = rows.find((r) => r.organization?.name?.trim().toLowerCase() === orgName.trim().toLowerCase())
-  if (!match?.organization?.id) return { status: "unclaimed" as const }
+  const hits = res.success ? (res.data?.data ?? []) : []
+  return hits.find((hit) => normalizedName(hit.organization?.name) === normalizedName(orgName))?.organization
+}
 
-  const detail = await callApi<{ claimed?: boolean }>("org/claim-status.detail", `/api/v2/organization/${match.organization.id}`)
-  if (detail.data?.claimed !== true) return { status: "unclaimed" as const }
+/** The single-org detail's `claimed` flag is the authoritative signal. */
+async function readClaimedFlag(orgId: number): Promise<boolean> {
+  const res = await callApi<{ claimed?: boolean }>("org/claim-status.detail", `/api/v2/organization/${orgId}`)
+  return res.data?.claimed === true
+}
 
-  const partnered = isPartneredWithTenant(match.organization.partnershipStatus, myTenantId)
-  const contact = match.organization.personContacts?.[0]
-  return partnered
-    ? { status: "claimed" as const, partnered: true, contact: fullContact(contact) }
-    : { status: "claimed" as const, partnered: false, contact: obfuscatedContact(contact) }
+async function getClaimStatus(orgName: string, viewerTenantId: string) {
+  const org = await findOrgByExactName(orgName)
+  if (!org?.id || !(await readClaimedFlag(org.id))) return { status: "unclaimed" as const }
+
+  const firstContact = org.personContacts?.[0]
+  // Your helper: does this org's partnership status name your tenant as an active partner?
+  return hasActivePartnership(org.partnershipStatus, viewerTenantId)
+    ? { status: "claimed" as const, partnered: true, contact: fullContact(firstContact) }
+    : { status: "claimed" as const, partnered: false, contact: obfuscatedContact(firstContact) }
 }
 ```
 

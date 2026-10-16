@@ -4,8 +4,8 @@
 
 **Use when:** you need a fast, authoritative BAA-status check — e.g. to route or gate a session — from a flag that lives on the platform's own tenant config and is only readable by a privileged service key, while the actual accept/read of the agreement must still run as the bound party.
 **Routes:** observed as `GET /api/v2/tenant/sys-config?Tenant IDs=` (the literal, space-containing query key is not a typo) — confirm the exact params and doc path via the [manifest](https://agents.1health.io/public/prod/api/manifest.md) before trusting a guessed link · `GET/PUT /api/v2/agreement/_type_[/accept]` (as in [baa-gating.md](baa-gating.md))
-**Reference code:** [`lib/expertdx/baa.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/baa.ts)
-**Seen in:** expertdx
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 
@@ -20,23 +20,25 @@
 ```ts
 // SERVICE KEY — coarse status flag, explicitly scoped by tenant id.
 // `serviceKeyCall` signs the request with the privileged credential, never the caller's.
-async function fetchTenantBaaStatus(
+async function isCoveredEntity(
   tenantId: number,
   serviceKeyCall: (path: string) => Promise<{ data: unknown }>,
 ): Promise<boolean> {
-  const params = new URLSearchParams({ "Tenant IDs": String(tenantId), includeAllRelations: "true" })
-  const res = await serviceKeyCall(`/api/v2/tenant/sys-config?${params}`)
-  const rows = Array.isArray(res.data) ? res.data : [res.data]
-  const row = rows[0] as { hipaaCoveredEntity?: boolean } | undefined
-  return row?.hipaaCoveredEntity === true // null/absent => not covered; fail closed
+  const search = new URLSearchParams()
+  search.set("Tenant IDs", String(tenantId)) // the literal key — the space is real
+  search.set("includeAllRelations", "true")
+  const { data } = await serviceKeyCall(`/api/v2/tenant/sys-config?${search}`)
+  const [config] = [data].flat() as Array<{ hipaaCoveredEntity?: boolean | null } | undefined>
+  return config?.hipaaCoveredEntity === true // null/absent => not covered; fail closed
 }
 
 // CALLER TOKEN — the agreement itself must be read/accepted as the bound party.
-async function fetchBaaAgreement(callerToken: string, baseUrl: string) {
-  const response = await fetch(`${baseUrl}/api/v2/agreement/BAA%20Organization%20Standard`, {
+async function readAgreementAsCaller(callerToken: string, baseUrl: string) {
+  const type = encodeURIComponent("BAA Organization Standard")
+  const response = await fetch(`${baseUrl}/api/v2/agreement/${type}`, {
     headers: { Authorization: `Bearer ${callerToken}` },
   })
-  return response.ok ? response.json() : null
+  return response.ok ? await response.json() : null // null = couldn't confirm; fail closed
 }
 ```
 

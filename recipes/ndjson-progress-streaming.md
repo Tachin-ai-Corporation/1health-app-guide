@@ -4,8 +4,8 @@
 provisioning chain, a bulk operation), and a single spinner for ten-plus seconds with no
 explanation is exactly the moment people abandon the flow.
 **Routes:** n/a — a transport pattern for your own server route (e.g. `POST /api/register/provision`)
-**Reference code:** [`app/api/register/provision/route.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/app/api/register/provision/route.ts)
-**Seen in:** expertdx, pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app, a transitional-care app
 
 ## Pattern
 
@@ -25,45 +25,60 @@ explanation is exactly the moment people abandon the flow.
 ## Minimal example
 
 ```ts
-// Server route
-export async function POST(request: Request) {
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream<Uint8Array>({
+// Server: a reusable NDJSON response. `work` gets an `emit` that writes one JSON line per call.
+function streamNdjson(work: (emit: (line: object) => void) => Promise<void>): Response {
+  const utf8 = new TextEncoder()
+  let writable = true
+  const body = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false
-      const send = (payload: unknown) => {
-        if (closed) return
+      const emit = (line: object) => {
+        if (!writable) return
         try {
-          controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`))
+          controller.enqueue(utf8.encode(JSON.stringify(line) + "\n"))
         } catch {
-          closed = true // client disconnected; keep working, stop trying to write
+          writable = false // client disconnected; keep working, stop trying to write
         }
       }
       try {
-        const result = await runMultiStepProcess((event) => send({ type: "progress", ...event }))
-        send({ type: "result", result })
-      } catch (error) {
-        send({ type: "error", error: error instanceof Error ? error.message : "Failed" })
+        await work(emit)
       } finally {
-        closed = true
-        try { controller.close() } catch {}
+        writable = false
+        try { controller.close() } catch { /* the client already closed it */ }
       }
     },
   })
-  return new Response(stream, {
-    headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" },
+  return new Response(body, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" } })
+}
+
+// Server route
+export async function POST(request: Request) {
+  return streamNdjson(async (emit) => {
+    try {
+      const result = await runMultiStepProcess((event) => emit({ type: "progress", ...event }))
+      emit({ type: "result", result })
+    } catch (error) {
+      emit({ type: "error", error: error instanceof Error ? error.message : "Failed" })
+    }
   })
 }
 
-// Client
-const res = await fetch("/api/register/provision", { method: "POST", body })
-const reader = res.body!.getReader()
-let buffer = ""
-for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-  buffer += new TextDecoder().decode(chunk.value)
-  const lines = buffer.split("\n")
-  buffer = lines.pop() ?? ""
-  for (const line of lines) if (line) handleEvent(JSON.parse(line))
+// Client: yield each complete line as a parsed event; a partial line waits for its newline.
+async function* ndjsonEvents(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.pipeThrough(new TextDecoderStream()).getReader()
+  let pending = ""
+  for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+    pending += chunk.value
+    for (let nl = pending.indexOf("\n"); nl !== -1; nl = pending.indexOf("\n")) {
+      const line = pending.slice(0, nl)
+      pending = pending.slice(nl + 1)
+      if (line) yield JSON.parse(line)
+    }
+  }
+}
+
+async function provision(body: BodyInit) {
+  const res = await fetch("/api/register/provision", { method: "POST", body })
+  for await (const event of ndjsonEvents(res.body!)) renderProgress(event)
 }
 ```
 

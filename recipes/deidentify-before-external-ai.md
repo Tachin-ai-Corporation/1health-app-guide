@@ -5,8 +5,8 @@ AI/ML service (an LLM, a diagnostic model) that must not receive direct patient 
 though the case in 1health legitimately holds full identity.
 **Routes:** n/a — this is a data-shaping gate you run *before* calling any external AI service; it
 makes no 1health call itself and holds no credential.
-**Reference code:** [`lib/expertdx/deident.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/deident.ts)
-**Seen in:** expertdx
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 
@@ -39,7 +39,7 @@ makes no 1health call itself and holds no credential.
 // Pure data-shaping — no network call, no credential. Runs just before the
 // external call, which lives in its own server-only module.
 
-export class DeidentificationError extends Error {}
+export class PhiLeakError extends Error {}
 
 interface CaseInput {
   caseId: string
@@ -48,31 +48,29 @@ interface CaseInput {
   referringQuestion?: string
 }
 
-function identifierNeedles(input: CaseInput): string[] {
-  const needles = input.patientName.split(/\s+/).filter((p) => p.length > 2)
-  if (input.mrn) needles.push(input.mrn)
-  needles.push(input.dob)
-  return needles
+// This case's own direct identifiers: name parts longer than an initial, the MRN, the DOB.
+function caseIdentifiers({ patientName, mrn, dob }: CaseInput): string[] {
+  const nameParts = patientName.split(/\s+/).filter((part) => part.length > 2)
+  return [...nameParts, ...(mrn ? [mrn] : []), dob]
 }
 
-function scrub(text: string, needles: string[]): string {
-  let out = text
-  for (const n of needles) out = out.replaceAll(n, "[patient identifier removed]")
-  return out // a real implementation also redacts absolute dates and bands ages — see deident.ts
+function maskIdentifiers(text: string, identifiers: string[]): string {
+  // A real implementation also redacts absolute dates and bands ages — see Pattern step 3.
+  return identifiers.reduce((masked, id) => masked.replaceAll(id, "[patient identifier removed]"), text)
 }
 
 // Projection: name only the fields that are safe, never copy-then-remove.
 export function buildDeidentifiedPayload(input: CaseInput, anchor: Date) {
-  const needles = identifierNeedles(input)
+  const identifiers = caseIdentifiers(input)
   return {
     case_id: input.caseId, // a reference, never an identifier
     labs: input.labs.map((l) => ({
       analyte: l.analyte,
       value: l.value,
       day_offset: l.collectedOn ? daysBetween(anchor, new Date(l.collectedOn)) : undefined,
-      note: l.note ? scrub(l.note, needles) : undefined,
+      note: l.note ? maskIdentifiers(l.note, identifiers) : undefined,
     })),
-    free_text: input.referringQuestion ? scrub(input.referringQuestion, needles) : undefined,
+    free_text: input.referringQuestion ? maskIdentifiers(input.referringQuestion, identifiers) : undefined,
   }
 }
 
@@ -81,19 +79,16 @@ function daysBetween(a: Date, b: Date) {
 }
 
 // The gate. Throws — never returns "probably fine."
-export function assertDeidentified(payload: unknown, input: CaseInput): void {
-  const haystack = JSON.stringify(payload).toLowerCase()
-  for (const needle of identifierNeedles(input)) {
-    if (haystack.includes(needle.toLowerCase())) {
-      throw new DeidentificationError("Refusing to send: a patient identifier survived de-identification")
-    }
-  }
+export function refuseIfIdentifiable(payload: unknown, input: CaseInput): void {
+  const serialized = JSON.stringify(payload).toLowerCase()
+  const leaked = caseIdentifiers(input).some((id) => serialized.includes(id.toLowerCase()))
+  if (leaked) throw new PhiLeakError("Refusing to send: a patient identifier survived de-identification")
   // ...plus an absolute-date / over-threshold-age scan over the free-text fields only.
 }
 
 export function buildSafePayload(input: CaseInput, anchor: Date) {
   const payload = buildDeidentifiedPayload(input, anchor)
-  assertDeidentified(payload, input) // never skip this — see Gotchas
+  refuseIfIdentifiable(payload, input) // never skip this — see Gotchas
   return payload
 }
 ```

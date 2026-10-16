@@ -4,8 +4,8 @@
 
 **Use when:** an authenticated user needs to hand a **reusable, long-lived** link to someone with no account (a patient, an external contact) that identifies one record, without minting that person a session.
 **Routes:** app-owned link-minting route; the underlying 1health write is a top-level `POST /api/v2/data/custom-data/bulk` APPEND → [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/bulk/agents.md)
-**Reference code:** [`lib/patient-link/token.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/patient-link/token.ts)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 ## Pattern
 

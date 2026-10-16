@@ -7,8 +7,8 @@ want to call directly from the client — and the result is reference data, not 
 **Routes:** n/a — this is a route **you** define (e.g. `GET /api/<your-proxy>/[param]`), not a
 1health endpoint. It sits alongside `/api/token` as one of the narrow, stateless exceptions to
 "the client calls 1health directly."
-**Reference code:** [`app/api/npi/lookup/route.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/app/api/npi/lookup/route.ts) · [`app/api/npi-lookup/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/app/api/npi-lookup/route.ts) · [`lib/npi/registry.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/npi/registry.ts) · [`app/api/icd10/[code]/route.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/app/api/icd10/%5Bcode%5D/route.ts)
-**Seen in:** trc-care-coordinator, med-adherence, pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app, a medication-adherence app, a transitional-care app
 
 ## Pattern
 
@@ -33,25 +33,25 @@ want to call directly from the client — and the result is reference data, not 
 // app/api/reference/[code]/route.ts — your own server route, not a 1health one.
 import { NextRequest, NextResponse } from "next/server"
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
-  const { code: raw } = await params
-  const code = (raw || "").replace(/[^a-z0-9]/gi, "").toUpperCase()
-  const fallback = NextResponse.json({ code, description: code }, { headers: { "Cache-Control": "public, max-age=86400" } })
-  if (!code) return fallback
+const ONE_DAY = { "Cache-Control": "public, max-age=86400" } // reference data barely changes
+const UPSTREAM = "https://public-reference-api.example.gov/lookup"
 
+/** The upstream's description, or null on any failure — the route degrades, it never errors. */
+async function describe(code: string): Promise<string | null> {
   try {
-    const res = await fetch(`https://public-reference-api.example.gov/lookup?code=${encodeURIComponent(code)}`, {
-      signal: AbortSignal.timeout(5000),
-    })
-    if (!res.ok) return fallback // degrade to the code itself rather than erroring
-    const data = await res.json().catch(() => null)
-    return NextResponse.json(
-      { code, description: data?.description ?? code },
-      { headers: { "Cache-Control": "public, max-age=86400" } },
-    )
+    const res = await fetch(`${UPSTREAM}?code=${encodeURIComponent(code)}`, { signal: AbortSignal.timeout(5000) })
+    const body = res.ok ? await res.json() : null
+    return typeof body?.description === "string" ? body.description : null
   } catch {
-    return fallback
+    return null
   }
+}
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ code: string }> }) {
+  // Allow-list the input before it goes anywhere near the upstream URL.
+  const code = ((await ctx.params).code ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+  const description = code ? await describe(code) : null
+  return NextResponse.json({ code, description: description ?? code }, { headers: ONE_DAY })
 }
 ```
 

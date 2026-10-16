@@ -9,8 +9,8 @@ write) → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workf
 [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/dashboard/agents.md)
 · `POST .../{id}/dashboard/refresh` (force-recompute) →
 [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/dashboard/refresh/agents.md)
-**Reference code:** [`campaign.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/campaign.ts#L167) (`fetchCampaignDashboard`)
-**Seen in:** trc-care-coordinator (coordinator KPI tiles)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app (coordinator KPI tiles)
 
 ## Pattern
 

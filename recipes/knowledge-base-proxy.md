@@ -7,8 +7,8 @@ user to read it, but want create/edit/retire restricted to admins — with 1heal
 citation, never the content itself.
 **Routes:** n/a — your own proxy route(s) forwarding to the vendor API; 1health is only involved
 through your own caller resolution.
-**Reference code:** [`lib/corpus/proxy.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/corpus/proxy.ts#L52) · [`lib/corpus/access.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/corpus/access.ts#L34)
-**Seen in:** expertdx-ordering-provider
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 
@@ -17,7 +17,7 @@ through your own caller resolution.
 2. Split the gate by intent: **reads** need only a valid 1health session (see
    [server-side-authorization.md](server-side-authorization.md)); **writes** additionally need a
    real authorization decision — the vendor's own permission check is a backstop, never yours.
-3. Wrap both shapes in one helper each (`handleRead`, `handleWrite`) so a new route can't skip the
+3. Wrap both shapes in one helper each (`proxyRead`, `proxyWrite`) so a new route can't skip the
    gate: resolve the caller, check the write gate if needed, call the vendor, relay its response
    verbatim.
 4. Validate anything you splice into the vendor's own path (a slug/id from the URL) — treat it as
@@ -28,27 +28,23 @@ through your own caller resolution.
 ```ts
 // lib/knowledge-base/proxy.ts — server-only
 import "server-only"
-import { requireCaller } from "@/lib/auth/session"
+import { requireSignedInUser, type SignedInUser } from "@/lib/auth/session"
 import { canCurate } from "./access"
 import { vendorFetch, hasVendorKey } from "./server"
 
-async function relay(res: Response) {
-  const text = await res.text()
-  return new Response(text || null, { status: res.status, headers: { "Content-Type": "application/json" } })
+type VendorRequest = () => Promise<Response>
+
+// Config check → session (+ policy) → vendor call → verbatim relay. Reads and writes differ only in `allow`.
+async function forward(send: VendorRequest, allow: (user: SignedInUser) => boolean) {
+  if (!hasVendorKey()) return Response.json({ error: "Not connected yet" }, { status: 503 })
+  if (!allow(await requireSignedInUser())) return Response.json({ error: "Admins only" }, { status: 403 })
+  const upstream = await send()
+  const body = (await upstream.text()) || null
+  return new Response(body, { status: upstream.status, headers: { "Content-Type": "application/json" } })
 }
 
-export async function handleRead(build: () => Promise<Response>) {
-  if (!hasVendorKey()) return Response.json({ error: "Not connected yet" }, { status: 503 })
-  await requireCaller() // any signed-in user may read
-  return relay(await build())
-}
-
-export async function handleWrite(build: () => Promise<Response>) {
-  if (!hasVendorKey()) return Response.json({ error: "Not connected yet" }, { status: 503 })
-  const caller = await requireCaller()
-  if (!canCurate(caller)) return Response.json({ error: "Admins only" }, { status: 403 })
-  return relay(await build())
-}
+export const proxyRead = (send: VendorRequest) => forward(send, () => true) // any signed-in user may read
+export const proxyWrite = (send: VendorRequest) => forward(send, canCurate) // curators only
 ```
 
 ## Gotchas

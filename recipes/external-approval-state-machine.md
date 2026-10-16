@@ -6,8 +6,8 @@
 1health customData is the only place you can durably track where a given record stands.
 **Routes:** state lives in customData — read via `POST /api/v2/query`, write via
 `POST /api/v2/data/custom-data/bulk`; see [read-write-custom-data.md](read-write-custom-data.md).
-**Reference code:** [`lib/kno2/entrant-profile.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/kno2/entrant-profile.ts#L100)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 ## Pattern
 
@@ -38,12 +38,16 @@ interface Registration {
   submission?: { recordId: string; approvedAt: string | null }
 }
 
-function statusOf(reg: Registration): Status {
-  if (reg.submission?.approvedAt) return "approved"
-  if (reg.submission) return "submitted"
-  if (reg.confirmed) return "confirmed"
-  if (reg.derived) return "derived"
-  return "none"
+// Furthest stage first: the first one whose evidence is present is the current state.
+const STAGES: ReadonlyArray<readonly [Status, (reg: Registration) => unknown]> = [
+  ["approved", (reg) => reg.submission?.approvedAt],
+  ["submitted", (reg) => reg.submission],
+  ["confirmed", (reg) => reg.confirmed],
+  ["derived", (reg) => reg.derived],
+]
+
+function currentStage(reg: Registration): Status {
+  return STAGES.find(([, evidence]) => evidence(reg))?.[0] ?? "none"
 }
 
 async function recordSubmission(appId: string, orgId: number, submission: NonNullable<Registration["submission"]>) {

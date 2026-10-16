@@ -2,8 +2,8 @@
 
 **Use when:** you want users to save, name, and reapply their own column layout, filters, and sort for a data grid — personal views — instead of hardcoding one fixed table shape.
 **Routes:** `GET/POST /api/v2/grid-config` → [agents.md](https://agents.1health.io/public/prod/api/v2/grid-config/agents.md) · `PUT/DELETE /api/v2/grid-config/_viewId_` → [agents.md](https://agents.1health.io/public/prod/api/v2/grid-config/agents.md) (collection and item ops share the same doc page)
-**Reference code:** [`lib/api/grid-config.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/grid-config.ts) · [`lib/api/mappers/grid-columns.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/mappers/grid-columns.ts) · [`use-saved-views.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/components/data-grid/hooks/use-saved-views.ts)
-**Seen in:** trc-care-coordinator · 1health platform usage (global/shared views)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app · 1health platform usage (global/shared views)
 
 ## Pattern
 
@@ -32,37 +32,37 @@
 ```ts
 import { authFetch, getOneHealthBaseUrl } from "@/lib/auth-client"
 
-interface GridConfiguration {
+// The layout your grid library hands you — stored opaquely, never validated by the platform.
+interface ViewLayout {
   columnState: { colId: string; hide: boolean; width: number }[]
-  filterModel?: Record<string, unknown>
+  filterModel?: { [field: string]: unknown }
 }
 
-interface SavedView {
+interface GridViewRecord {
   id: string
   gridIdentifier: string
   name: string
-  configuration: string // JSON-stringified GridConfiguration
+  configuration: string // JSON-stringified ViewLayout
 }
 
+const gridConfigUrl = (query = "") => `${getOneHealthBaseUrl()}/api/v2/grid-config${query}`
+
 // SAVE a new named view.
-async function saveGridView(gridIdentifier: string, name: string, configuration: GridConfiguration) {
-  const baseUrl = getOneHealthBaseUrl()
-  const response = await authFetch(`${baseUrl}/api/v2/grid-config`, {
-    method: "POST",
-    body: JSON.stringify({ gridIdentifier, name, configuration: JSON.stringify(configuration) }),
-  })
+async function createNamedView(gridIdentifier: string, name: string, layout: ViewLayout): Promise<GridViewRecord> {
+  const body = { gridIdentifier, name, configuration: JSON.stringify(layout) }
+  const response = await authFetch(gridConfigUrl(), { method: "POST", body: JSON.stringify(body) })
   if (!response.ok) throw new Error(`Save view failed: ${response.status}`)
-  return response.json() as Promise<SavedView>
+  return response.json()
 }
 
 // LIST views for one grid — a fresh grid returns an empty page (older deployments 404'd; handle both).
-async function getGridViews(gridIdentifier: string, page = 0, size = 20): Promise<SavedView[]> {
-  const baseUrl = getOneHealthBaseUrl()
-  const params = new URLSearchParams({ gridIdentifier, page: String(page), size: String(size) })
-  const response = await authFetch(`${baseUrl}/api/v2/grid-config?${params}`)
+async function listViewsForGrid(gridIdentifier: string, page = 0, size = 20): Promise<GridViewRecord[]> {
+  const query = new URLSearchParams({ gridIdentifier, page: `${page}`, size: `${size}` })
+  const response = await authFetch(gridConfigUrl(`?${query}`))
   if (response.status === 404) return []
   if (!response.ok) throw new Error(`List views failed: ${response.status}`)
-  return (await response.json()).data ?? []
+  const envelope: { data?: GridViewRecord[] } = await response.json()
+  return envelope.data ?? []
 }
 
 // Remember only the POINTER locally; the view itself lives in 1health.
@@ -74,8 +74,8 @@ function rememberLastViewId(gridIdentifier: string, viewId: string) {
 // substitute it with the current viewer's own org id before applying the view.
 const VIEWER_ORG_PLACEHOLDER = "{{viewerOrgId}}"
 
-function resolveGlobalViewFilters(configuration: GridConfiguration, viewerOrgId: string): GridConfiguration {
-  const raw = JSON.stringify(configuration).replaceAll(VIEWER_ORG_PLACEHOLDER, viewerOrgId)
+function resolveGlobalViewFilters(layout: ViewLayout, viewerOrgId: string): ViewLayout {
+  const raw = JSON.stringify(layout).replaceAll(VIEWER_ORG_PLACEHOLDER, viewerOrgId)
   return JSON.parse(raw)
 }
 ```

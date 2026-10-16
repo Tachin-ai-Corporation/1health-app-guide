@@ -2,8 +2,8 @@
 
 **Use when:** you must perform a non-idempotent write (attach a document, file a chart entry, create a downstream record) from an automated or repeatable trigger, and writing it twice is worse than occasionally not writing it at all.
 **Routes:** read via `POST /api/v2/query` (project `customData`) · write via `POST /api/v2/data/custom-data/bulk` → [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/bulk/agents.md)
-**Reference code:** [`lib/partner-records/ledger.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/partner-records/ledger.ts), [`lib/partner-records/filing.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/partner-records/filing.ts#L636)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 ## Pattern
 
@@ -31,17 +31,21 @@ async function loadLedger(ownerType: string, ownerId: number, appId: string): Pr
   return ((res.data!.appData as any)?.[appId]?.[LEDGER_KEY] as Ledger) ?? {}
 }
 
-let writeChain: Promise<unknown> = Promise.resolve()
+// Ledger writes run one at a time: each waits for the one before it.
+let ledgerQueue: Promise<void> = Promise.resolve()
+function inLedgerOrder(task: () => Promise<void>): Promise<void> {
+  ledgerQueue = ledgerQueue.then(task)
+  return ledgerQueue
+}
 
 function recordDone(ownerType: string, ownerId: number, appId: string, sourceKey: string, targetId: number) {
-  writeChain = writeChain.then(async () => {
+  return inLedgerOrder(async () => {
     // Send just the new entry: mergeCustomData deep-merges it into the ledger it reads
     // (so every existing entry survives) and writes nothing if that read fails.
     const entry = { [sourceKey]: { targetId, at: new Date().toISOString() } }
     const res = await mergeCustomData(ownerType, ownerId, appData(appId, { [LEDGER_KEY]: entry }))
     if (!res.success) console.warn("[ledger] entry not recorded:", res.error) // best-effort on write; no key values
   })
-  return writeChain
 }
 
 /** The guard, called before the irreversible write. */

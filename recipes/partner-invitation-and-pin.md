@@ -3,8 +3,8 @@
 **Use when:** you need to invite an organization into a partnership with your tenant and obtain a
 shareable registration PIN — including recovering an invitation that was previously rejected.
 **Routes:** `POST /api/v2/organization/partner/invitation` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partner/invitation/agents.md) · `POST /api/v2/organization/partnership/request` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partnership/request/agents.md) · `PUT /api/v2/organization/partnership/{orgId}/status` → [agents.md](https://agents.1health.io/public/prod/api/v2/organization/partnership/_orgId_/status/agents.md) · `POST /api/v3/otp/verify-code` → [agents.md](https://agents.1health.io/public/prod/api/v3/otp/verify-code/agents.md)
-**Reference code:** [`lib/onehealth/organization-list.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-med-adherence-bcbsm/blob/main/lib/onehealth/organization-list.ts#L395)
-**Seen in:** med-adherence; the same call opens step 3 of [self-service-org-onboarding-by-npi.md](self-service-org-onboarding-by-npi.md) (pcp-tcm, expertdx)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A medication-adherence app; the same call opens step 3 of [self-service-org-onboarding-by-npi.md](self-service-org-onboarding-by-npi.md) (a transitional-care app, a specialist-consult ordering app)
 
 ## Pattern
 
@@ -46,27 +46,40 @@ shareable registration PIN — including recovering an invitation that was previ
 ## Minimal example
 
 ```ts
-async function invitePartner(orgId: number, name: string, email: string) {
-  let res = await callApi<{ invitationPin?: string; pin?: string; id?: number }>(
-    "partner/invite",
-    "/api/v2/organization/partner/invitation",
-    { method: "POST", body: JSON.stringify({ partnerOrganizationId: orgId, name, email }) },
-  )
+import { callApi, callApiRaw } from "@/lib/api"
 
-  if (!res.success && isRejectedPartnershipError(res.error)) {
+type InviteOutcome =
+  | { status: "invited"; pin: string; partnershipId: number | null }
+  | { status: "already-partnered" } // 409 — get the current PIN from deep-link-invite-url.md if you need it
+
+// callApiRaw, not callApi: this flow needs the status code (409 = success) and the error text
+// (to spot a Rejected partnership), and callApi's error string carries neither.
+async function postInvitation(body: object): Promise<{ status: number; text: string }> {
+  const res = await callApiRaw("/api/v2/organization/partner/invitation", { method: "POST", body: JSON.stringify(body) })
+  return { status: res.status, text: await res.text() }
+}
+
+async function invitePartner(orgId: number, name: string, email: string): Promise<InviteOutcome> {
+  const body = { partnerOrganizationId: orgId, name, email }
+  let res = await postInvitation(body)
+
+  // A previously Rejected partnership blocks re-invite: detect it by message text, reset it to
+  // Pending (a query parameter), then retry ONCE.
+  if (res.status >= 400 && res.status !== 409 && /rejected/i.test(res.text)) {
     await callApi("partner/reset", `/api/v2/organization/partnership/${orgId}/status?partnershipStatus=Pending`, {
       method: "PUT",
     })
-    res = await callApi("partner/invite retry", "/api/v2/organization/partner/invitation", {
-      method: "POST",
-      body: JSON.stringify({ partnerOrganizationId: orgId, name, email }),
-    })
+    res = await postInvitation(body)
   }
-  if (!res.success) throw new Error(`Could not invite ${name}: ${res.error}`)
 
-  const pin = res.data?.invitationPin ?? res.data?.pin
+  if (res.status === 409) return { status: "already-partnered" } // success: the partnership exists
+  if (res.status !== 200 && res.status !== 201) throw new Error(`Could not invite ${name} (HTTP ${res.status})`)
+
+  // Read the PIN only from a successful body — never from an error body.
+  const data = (res.text ? JSON.parse(res.text) : {}) as { invitationPin?: string; pin?: string; id?: number }
+  const pin = data.invitationPin ?? data.pin
   if (!pin) throw new Error(`1health did not return a PIN for ${name}`)
-  return { pin: String(pin), partnershipId: res.data?.id ?? null }
+  return { status: "invited", pin: String(pin), partnershipId: data.id ?? null }
 }
 
 // Upsert branch 2: no existing org id yet — mint one in the same call.

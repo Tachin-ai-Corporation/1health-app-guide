@@ -5,7 +5,7 @@
 **Use when:** you want anyone with an address on an approved domain to self-register into a
 tenant, without inviting each person individually — and to shut that door for every other domain.
 **Routes:** `POST /api/graphql` → [agents.md](https://agents.1health.io/public/prod/api/graphql/agents.md) — a query/mutation against the tenant configuration record's `allowedDomains` field
-**Reference code:** [`lib/api/tags.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/tags.ts#L32) (the general authenticated-GraphQL-call shape this reuses, against a different record type)
+**Reference code:** none public — see the Minimal example.
 **Seen in:** 1health platform usage
 
 ## Pattern

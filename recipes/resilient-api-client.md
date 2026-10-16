@@ -64,13 +64,13 @@ call itself is `POST {baseUrl}/auth/oauth2/token`, outside `/api` — see
 import { getOneHealthBaseUrl, getAccessToken, getRefreshToken, SessionExpiredError } from "@/lib/auth-client"
 
 // Reactive, single-flight refresh: every concurrent 401 awaits the SAME promise.
-let refreshPromise: Promise<string | null> | null = null
+let pendingRefresh: Promise<string | null> | null = null
 
 async function refreshOnce(forTenantId: string): Promise<string | null> {
-  if (!refreshPromise) {
-    refreshPromise = refreshForTenant(forTenantId).finally(() => { refreshPromise = null })
+  if (!pendingRefresh) {
+    pendingRefresh = refreshForTenant(forTenantId).finally(() => { pendingRefresh = null })
   }
-  return refreshPromise
+  return pendingRefresh
 }
 
 async function refreshForTenant(tenantId: string): Promise<string | null> {

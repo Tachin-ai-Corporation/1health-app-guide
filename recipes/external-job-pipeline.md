@@ -7,8 +7,8 @@ you need the result to end up durable in 1health, not lost when the vendor expir
 endpoints (never expose the vendor's API key to the browser); the eventual persistence step reuses
 the routes from [external-record-to-medical-record.md](external-record-to-medical-record.md) /
 [read-write-custom-data.md](read-write-custom-data.md).
-**Reference code:** [`lib/cqd/client.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/cqd/client.ts) (server-side submit/poll/result) · [`lib/api/cqd.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/cqd.ts) (client-side poll loop + persistence)
-**Seen in:** expertdx, pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app, a transitional-care app
 
 ## Pattern
 

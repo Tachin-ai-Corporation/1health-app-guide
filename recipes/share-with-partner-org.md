@@ -4,8 +4,8 @@
 commonly a whole campaign, so every journey under it becomes visible to the partner — without
 making them a member of your tenant.
 **Routes:** `POST /api/v2/health/workflow-campaign/{id}/share` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/share/agents.md) · `POST .../{id}/unshare` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/unshare/agents.md) · a single instance follows an analogous shape via `POST /api/v2/share` (not yet in the published docs)
-**Reference code:** [`containers.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/containers.ts#L178) (`shareContainer`)
-**Seen in:** secure-share, trc-care-coordinator (via the template baseline)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app, a care-coordination app (via the template baseline)
 
 > **⚠ Not yet in 1health's published API docs:** `POST /api/v2/share`. 1health supports it for
 > third-party apps, but agents.1health.io has no page for it yet — verify its exact body shape

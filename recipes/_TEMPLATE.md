@@ -2,15 +2,16 @@
 RECIPE TEMPLATE — copy this file to create a new recipe. Keep the section order fixed so an
 LLM can rely on the shape. Keep it abstract and product-neutral: use placeholder type/field
 names, never a specific app's hardcoded ids. Link DOWN to the live route docs on
-agents.1health.io for exact contracts, and SIDEWAYS to the real example-repo file that proves it.
+agents.1health.io for exact contracts. Follow CONTRIBUTING.md: this repo is public, so nothing
+here may link to, name, or copy from a private repo.
 -->
 
 # <Recipe title: a capability, phrased as a thing you do>
 
 **Use when:** <the trigger — the situation in which an LLM should reach for this recipe>
 **Routes:** `<METHOD /api/…>` → <link to that route's agents.md> (+ examples.md if it exists)
-**Reference code:** <link to the example-repo file(s) that implement this>
-**Seen in:** <which of the example apps use this pattern>
+**Reference code:** <a link to a PUBLIC repo file (usually the app template), or exactly: none public — see the Minimal example.>
+**Seen in:** <the kinds of apps that use this pattern, described generically (e.g. "a care-coordination app"); name a public repo only>
 
 ## Pattern
 

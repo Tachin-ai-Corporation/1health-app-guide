@@ -8,8 +8,8 @@ what looks like one shared space.
 **Routes:** n/a — client-side aggregation over `POST /api/v3/health/grid/workflow-campaign`
 (list your campaigns) → [agents.md](https://agents.1health.io/public/prod/api/v3/health/grid/workflow-campaign/agents.md)
 plus the share endpoint from F1.
-**Reference code:** [`dashboard.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/components/dashboard.tsx#L104) (`deduplicateMirrors`)
-**Seen in:** secure-share (bidirectional file-drop channels)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app (bidirectional file-drop channels)
 
 ## Pattern
 
@@ -27,20 +27,38 @@ plus the share endpoint from F1.
 ## Minimal example
 
 ```ts
-function mirrorKey(name: string, partnerLabel: string): string {
-  return `${name.toLowerCase()}::${partnerLabel.toLowerCase()}`
+import type { Campaign } from "@/lib/api"
+
+// Your helper: the org on the other side of a campaign (its owner, or whoever you shared it with).
+declare function partnerOf(campaign: Campaign, viewerTenantId: number): { label: string; orgId: number }
+
+/** One display row = every side of one mirror pair. */
+interface DisplayChannel {
+  shown: Campaign               // most recently updated side: the row's name and dates
+  partner: { label: string; orgId: number }
+  pairCampaignIds: number[]     // every side: fan reads out across all of these
+  ownCampaignId: number | null  // your side, the only one you write to (null = not created yet)
 }
 
-function dedupeMirrors(campaigns: Campaign[], myTenantId: number): DisplayChannel[] {
-  const groups = new Map<string, Campaign[]>()
-  for (const c of campaigns) {
-    const key = mirrorKey(c.name, partnerLabelFor(c, myTenantId))
-    groups.set(key, [...(groups.get(key) ?? []), c])
+const pairKey = (name: string, partnerLabel: string) =>
+  [name, partnerLabel].map((part) => part.toLowerCase()).join("::")
+
+const updatedMs = (campaign: Campaign) => Date.parse(campaign.updated ?? "") || 0
+
+function collapseMirrorPairs(campaigns: Campaign[], viewerTenantId: number): DisplayChannel[] {
+  const byPair = new Map<string, DisplayChannel>()
+  for (const campaign of campaigns) {
+    const partner = partnerOf(campaign, viewerTenantId)
+    const key = pairKey(campaign.name, partner.label)
+    const channel: DisplayChannel =
+      byPair.get(key) ?? { shown: campaign, partner, pairCampaignIds: [], ownCampaignId: null }
+    byPair.set(key, channel)
+
+    channel.pairCampaignIds.push(campaign.id)
+    if (updatedMs(campaign) > updatedMs(channel.shown)) channel.shown = campaign
+    if (campaign.ownerOrganization?.tenantId === viewerTenantId) channel.ownCampaignId ??= campaign.id
   }
-  return [...groups.values()].map((group) => {
-    const primary = group.sort((a, b) => +new Date(b.updated) - +new Date(a.updated))[0]
-    return { ...primary, allCampaignIds: group.map((c) => c.id) }
-  })
+  return [...byPair.values()]
 }
 ```
 

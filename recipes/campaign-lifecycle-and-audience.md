@@ -7,7 +7,7 @@ will actually enroll before running it, and keeping its dashboard tiles current.
 **Routes:** `POST/PUT /api/v2/health/workflow-campaign` (create/update, incl. `labelTagIds`) → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/agents.md) · `POST .../{id}/run` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/run/agents.md) · `PUT .../{id}/cancel` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/cancel/agents.md) · `PUT .../{id}/finish` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/finish/agents.md) · `POST .../{id}/restart` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/restart/agents.md) · `PUT .../{id}/use-latest-template` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/use-latest-template/agents.md) · `GET .../{id}/tagged-instance-count` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/tagged-instance-count/agents.md)
 **Reference code:** [`lib/api/campaign.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/campaign.ts) (`createCampaign` already takes the audience tags; `activateCampaign` is the sibling call this recipe's other transitions extend the same way)
 **Seen in:** 1health platform usage — extends the campaign object already used in template,
-secure-share, pcp-tcm (see [provision-templates-and-campaigns.md](provision-templates-and-campaigns.md))
+a secure file-sharing app, a transitional-care app (see [provision-templates-and-campaigns.md](provision-templates-and-campaigns.md))
 
 ## Pattern
 

@@ -2,8 +2,8 @@
 
 **Use when:** you want to apply or remove reusable labels across many selected records in one user action — e.g. tagging a multi-select in a grid.
 **Routes:** list via `POST /api/graphql` → [agents.md](https://agents.1health.io/public/prod/api/graphql/agents.md) (the `LabelTag` type) · fallback listing via `POST /api/v3/health/grid/label-tag` (not yet in the published docs) · apply/create-or-apply via `PUT /api/v2/tag/_key_` (not yet in the published docs) · remove via `PUT /api/v2/tag/remove` → [agents.md](https://agents.1health.io/public/prod/api/v2/tag/remove/agents.md) · tag details via `GET /api/v2/tag/_id_/details` (not yet in the published docs) · merge via `POST /api/v2/tag/_id_/migrate` (not yet in the published docs)
-**Reference code:** [`lib/api/tags.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/tags.ts)
-**Seen in:** trc-care-coordinator · 1health platform usage (create-or-apply, merge, grid listing)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app · 1health platform usage (create-or-apply, merge, grid listing)
 
 > **⚠ Not yet in 1health's published API docs:** `PUT /api/v2/tag/{key}`, `GET /api/v2/tag/{id}/details`,
 > `POST /api/v2/tag/{id}/migrate`, `POST /api/v3/health/grid/label-tag`. 1health supports these for
@@ -41,18 +41,18 @@ import { authFetch, getOneHealthBaseUrl } from "@/lib/auth-client"
 
 interface Tag { id: number; name: string }
 
+const LABEL_TAG_LIST_QUERY = `query ($filter: LabelTagFilterInput) {
+  LabelTag(filter: $filter) { records { id, name } }
+}`
+
 // LIST — via GraphQL, not /query. Scope by owning tenant.
-async function fetchAllTags(tenantId: number): Promise<Tag[]> {
+async function listJourneyTags(tenantId: number): Promise<Tag[]> {
   const baseUrl = getOneHealthBaseUrl()
+  const filter = { type: { equal: "Journey" }, createdByTenantId: { equal: tenantId } }
   const response = await authFetch(`${baseUrl}/api/graphql`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query: `query ($filter: LabelTagFilterInput) {
-        LabelTag(filter: $filter) { records { id, name } }
-      }`,
-      variables: { filter: { type: { equal: "Journey" }, createdByTenantId: { equal: tenantId } } },
-    }),
+    body: JSON.stringify({ query: LABEL_TAG_LIST_QUERY, variables: { filter } }),
   })
   if (!response.ok) return []
   const body = await response.json()

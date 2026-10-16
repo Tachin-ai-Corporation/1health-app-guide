@@ -4,8 +4,8 @@
 subdomain, org "types") and/or its branding (light/dark logo, light/dark icon) — and want to know
 why one PUT doesn't do both.
 **Routes:** `PUT /api/v2/tenant` → [agents.md](https://agents.1health.io/public/prod/api/v2/tenant/agents.md) (identity fields) · `POST /api/v2/health/type/{typeKey}/{instanceId}/relation/{relKey}/file/upload` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/type/_typeKey_/_instanceId_/relation/_relKey_/file/upload/agents.md) (branding files — generic relation upload)
-**Reference code:** [`journey-attachments.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/journey-attachments.ts) (same generic relation-upload call, against a different relation) — none public for the identity PUT or for a branding relation specifically; see the Minimal example.
-**Seen in:** trc-care-coordinator (the underlying upload mechanic, via [attachments.md](attachments.md)); 1health platform usage (branding as four independent relation slots)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app (the underlying upload mechanic, via [attachments.md](attachments.md)); 1health platform usage (branding as four independent relation slots)
 
 ## Pattern
 

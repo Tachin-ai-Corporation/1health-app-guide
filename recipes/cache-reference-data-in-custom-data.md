@@ -5,8 +5,8 @@ call) and you'll need it again for the same record — cache it onto the 1health
 describes instead of re-hitting the external source (or your own proxy) every time.
 **Routes:** same as [read-write-custom-data.md](read-write-custom-data.md) — read via
 `POST /api/v2/query`, write via `POST /api/v2/data/custom-data/bulk`.
-**Reference code:** [`lib/npi/registry.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/npi/registry.ts) (the cached value's source) — the caching write itself is the same primitive as [read-write-custom-data.md](read-write-custom-data.md)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 > **Scope check:** this recipe is for caching an *external* lookup result onto the **specific
 > record** it describes — durable, cross-device. For *global* metadata that isn't "about" any one

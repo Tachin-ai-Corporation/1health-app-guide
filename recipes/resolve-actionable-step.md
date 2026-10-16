@@ -4,8 +4,9 @@
 running your campaign — not just the org that created it — e.g. reading/writing step-level
 notification config that must resolve to the same step no matter who's asking, or locating "the
 step that does X" in a template whose step names you don't fully control.
-**Routes:** `POST /api/v2/query` (×2, structural) → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)**Reference code:** [`lib/api/step-resolution-core.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/step-resolution-core.ts)
-**Seen in:** secure-share
+**Routes:** `POST /api/v2/query` (×2, structural) → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app
 
 ## Pattern
 
@@ -51,40 +52,43 @@ step that does X" in a template whose step names you don't fully control.
 ## Minimal example
 
 ```ts
-import { runQueryRows, eq, getRelated, getRelatedAttr } from "@/lib/api"
+import { runQueryRows, eq, getRelated, getRelatedAttr, type QueryRelatedInstance } from "@/lib/api"
 
-const REL_BASE_TEMPLATE = "WorkflowCampaign.WorkflowCampaignHasBaseWorkflowTemplate.WorkflowTemplate"
-const REL_ROOT_STEP = "WorkflowTemplate.WorkflowTemplateHasRootWorkflowTemplateStep.WorkflowTemplateStep"
-const REL_CHILD_STEP = "WorkflowTemplateStep.WorkflowTemplateStepHasChildWorkflowTemplateStep.WorkflowTemplateStep"
+// Relationship keys are "<SourceType>.<Edge>.<TargetType>" — exact platform strings.
+const CAMPAIGN_TO_BASE_TEMPLATE = "WorkflowCampaign.WorkflowCampaignHasBaseWorkflowTemplate.WorkflowTemplate"
+const TEMPLATE_TO_ROOT_STEP = "WorkflowTemplate.WorkflowTemplateHasRootWorkflowTemplateStep.WorkflowTemplateStep"
+const STEP_TO_CHILD_STEPS = "WorkflowTemplateStep.WorkflowTemplateStepHasChildWorkflowTemplateStep.WorkflowTemplateStep"
 
-// 1. campaignId -> base WorkflowTemplate id — the CANONICAL relationship, not a
+// 1. campaignId -> base WorkflowTemplate id — via the CANONICAL relationship, not a
 //    tenant-scoped convenience field like campaign.baseWorkflowTemplate.id.
-const campaignRows = await runQueryRows({
-  key: "WorkflowCampaign", filter: eq("id", campaignId), attributes: ["id"],
-  relationships: [{ key: REL_BASE_TEMPLATE, attributes: ["id"], limit: 1 }],
-})
-const baseTemplate = getRelated(campaignRows[0], REL_BASE_TEMPLATE)[0]
-const templateId = getRelatedAttr<number>(
-  baseTemplate, "WorkflowCampaignHasBaseWorkflowTemplate", "WorkflowTemplate", "id",
-)
+async function findBaseTemplateId(campaignId: number): Promise<number | undefined> {
+  const toTemplate = { key: CAMPAIGN_TO_BASE_TEMPLATE, limit: 1, attributes: ["id"] }
+  const [campaign] = await runQueryRows({
+    key: "WorkflowCampaign", attributes: ["id"], filter: eq("id", campaignId), relationships: [toTemplate],
+  })
+  const [link] = campaign ? getRelated(campaign, CAMPAIGN_TO_BASE_TEMPLATE) : []
+  return link && getRelatedAttr<number>(link, "WorkflowCampaignHasBaseWorkflowTemplate", "WorkflowTemplate", "id")
+}
 
-// 2. templateId -> root step -> children, matched by name — never childSteps[0].
-const templateRows = await runQueryRows({
-  key: "WorkflowTemplate", filter: eq("id", templateId!), attributes: ["id"],
-  relationships: [{
-    key: REL_ROOT_STEP, attributes: ["id"], limit: 1,
-    relationships: [{ key: REL_CHILD_STEP, attributes: ["id", "name"], limit: 10 }],
-  }],
-})
-const rootWrapper = getRelated(templateRows[0], REL_ROOT_STEP)[0]
-// A second level of nesting is read off the wrapper's `.instance` directly.
-const children = rootWrapper?.instance.relationships?.[REL_CHILD_STEP] ?? []
-const childName = (c: (typeof children)[number]) =>
-  getRelatedAttr<string>(c, "WorkflowTemplateStepHasChildWorkflowTemplateStep", "WorkflowTemplateStep", "name")
+// 2. templateId -> root step -> children, picked by name — never childSteps[0].
+async function findTargetStep(templateId: number, keyword: string): Promise<QueryRelatedInstance | undefined> {
+  const toChildren = { key: STEP_TO_CHILD_STEPS, limit: 10, attributes: ["id", "name"] }
+  const toRoot = { key: TEMPLATE_TO_ROOT_STEP, limit: 1, attributes: ["id"], relationships: [toChildren] }
+  const [template] = await runQueryRows({
+    key: "WorkflowTemplate", attributes: ["id"], filter: eq("id", templateId), relationships: [toRoot],
+  })
+  const [root] = template ? getRelated(template, TEMPLATE_TO_ROOT_STEP) : []
+  // A second level of nesting is read off the wrapper's `.instance` directly.
+  const steps = root?.instance.relationships?.[STEP_TO_CHILD_STEPS] ?? []
+  const stepLabel = (step: QueryRelatedInstance) =>
+    getRelatedAttr<string>(step, "WorkflowTemplateStepHasChildWorkflowTemplateStep", "WorkflowTemplateStep", "name") ?? ""
 
-const target = children.find((c) => childName(c)?.toLowerCase().includes("upload"))
-  ?? children[children.length - 1]
-  ?? children[0]
+  const named = steps.find((step) => stepLabel(step).toLowerCase().includes(keyword))
+  return named ?? steps[steps.length - 1] ?? steps[0]   // name match, else the terminal step, else the first
+}
+
+const templateId = await findBaseTemplateId(campaignId)
+const target = templateId ? await findTargetStep(templateId, "upload") : undefined
 ```
 
 ## Gotchas

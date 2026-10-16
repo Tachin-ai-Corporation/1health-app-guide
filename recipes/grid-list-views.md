@@ -5,8 +5,8 @@ comment list, a user list) rather than doing a flexible entity+relationship read
 back pre-flattened, with a standard paginated envelope.
 **Routes:** `POST /api/v3/health/grid/<view>` → [agents.md](https://agents.1health.io/public/prod/api/v3/health/grid/journey/agents.md)
 (the `journey` view, as a concrete example — see the [manifest](https://agents.1health.io/public/prod/api/manifest.md) for the full list of views)
-**Reference code:** [`lib/api/grid.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/grid.ts) (baseline fetch-all) · [`lib/api/journey-grid.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/journey-grid.ts#L1461) (production truncation-detection)
-**Seen in:** most example apps (the standard list/table engine); truncation detection hardened in trc-care-coordinator after a real missing-records bug · 1health platform usage (view catalog, dual REST dialects, master-detail grids)
+**Reference code:** [`lib/api/grid.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/grid.ts) (baseline fetch-all)
+**Seen in:** most example apps (the standard list/table engine); truncation detection hardened in a care-coordination app after a real missing-records bug · 1health platform usage (view catalog, dual REST dialects, master-detail grids)
 
 ## Pattern
 
@@ -73,28 +73,24 @@ export async function fetchAllRows<T>(
   { pageSize = 100, maxPages = 200 } = {},
 ): Promise<FetchAllResult<T>> {
   const rows: T[] = []
-  let rowsSeen = 0
-  let totalElements: number | undefined
-  let truncated = false
+  let claimedTotal: number | undefined
+  // Only a last-page signal sets this. A failed page or hitting maxPages leaves it false.
+  let reachedEnd = false
 
-  for (let page = 0; page < maxPages; page++) {
+  for (let page = 0; page < maxPages && !reachedEnd; page++) {
     const res = await runGridQuery<T>(view, { filterBy, page, size: pageSize })
-    if (!res.success || !res.data) { truncated = true; break }
+    if (!res.success || !res.data) break
 
-    const { data, totalElements: total, lastPage } = res.data
-    rowsSeen += data.length
-    totalElements = total ?? totalElements
+    const { data, totalElements, lastPage } = res.data
     rows.push(...data)
-
-    if (lastPage === true || data.length < pageSize) break
-    if (page === maxPages - 1) truncated = true
+    if (totalElements != null) claimedTotal = totalElements
+    reachedEnd = lastPage === true || data.length < pageSize
   }
 
-  // The server's reported count is only used to CHECK the walk, never to end it early —
-  // a stale or per-page total would otherwise truncate the result silently.
-  if (totalElements !== undefined && rowsSeen < totalElements) truncated = true
-
-  return { rows, truncated }
+  // The total is checked only AFTER the walk and never ends it early, since a stale
+  // or per-page total would cut the walk short without anyone noticing.
+  const shortOfTotal = claimedTotal !== undefined && rows.length < claimedTotal
+  return { rows, truncated: !reachedEnd || shortOfTotal }
 }
 ```
 

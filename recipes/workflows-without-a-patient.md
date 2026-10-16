@@ -5,8 +5,8 @@ internal request) and you still want 1health's workflow engine for it: steps, st
 comments, assignment, sharing. The campaign vocabulary is patient-first, but a workflow doesn't
 need a patient.
 **Routes:** `POST /api/v2/health/workflow-campaign` (create) → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/agents.md) · `POST .../{id}/run` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/run/agents.md) · `POST /api/v2/journey` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/agents.md)
-**Reference code:** [`create-container-flow.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/create-container-flow.ts#L126) (a campaign per exchange channel, with no audience) · [`container-journeys.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/lib/api/container-journeys.ts#L44) (`createJourney(campaignId)`: a journey per file, no patient) · the template's [`lib/api/campaign.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/campaign.ts) (`createCampaign` already defaults to no audience)
-**Seen in:** secure-share, a whole file-exchange product built on journeys that never involve a patient
+**Reference code:** the template's [`lib/api/campaign.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/campaign.ts) (`createCampaign` already defaults to no audience)
+**Seen in:** A secure file-sharing app: a whole file-exchange product built on journeys that never involve a patient
 
 ## Pattern
 
@@ -16,22 +16,22 @@ need a patient.
    All of that is about which patients a campaign enrolls when it runs. None of it is needed to
    run a process.
 2. **Design the template with no assign-patient step.** Start it with whatever your process
-   actually starts with. Secure-share's template goes: select the partner org → upload the file →
-   download (or reject) it.
+   actually starts with. A file-exchange template, for example, goes: select the partner org →
+   upload the file → download (or reject) it.
 3. **Create the campaign with no audience:** `labelTagIds: []` and no cohort. It's just the home
-   your journeys hang off. Secure-share makes one per exchange channel ("container"); an export
-   tool would make one per app or per org. Name it for the process, not a cohort, and find it by
+   your journeys hang off. A file exchange makes one per exchange channel (a "container"); an
+   export tool would make one per app or per org. Name it for the process, not a cohort, and find it by
    name before creating it, because campaign creation isn't idempotent.
 4. **Run it anyway.** Journeys can only attach to a campaign that has been run. With no audience,
    the run enrolls nobody, which is exactly what you want.
 5. **Start a journey each time the process happens**, with `POST /api/v2/journey { campaignId }`
    and nothing else: no patient and no subject. You can seed and submit the first step inline
-   (`submitSteps`). Secure-share starts one journey per file.
+   (`submitSteps`). A file exchange starts one journey per file.
 6. **Leave `allowMultiplePatientJourneys` off.** It limits journeys *per patient*, so journeys
-   with no patient aren't affected. Secure-share keeps it `false` and still creates a journey for
-   every file in the same campaign.
+   with no patient aren't affected. A file exchange keeps it `false` and still creates a journey
+   for every file in the same campaign.
 
-The journey records who started it (its creator person, which secure-share reads as the sender).
+The journey records who started it (its creator person, which a file exchange reads as the sender).
 You get "who ran it" without casting anyone as a patient.
 
 ## Primary vs fallback
@@ -84,5 +84,5 @@ const journey = await createJourney(wf.campaignId!)
 - [workflows-journeys-steps.md](workflows-journeys-steps.md): starting and advancing the journeys.
 - [provision-templates-and-campaigns.md](provision-templates-and-campaigns.md): the find/clone/publish + create/run flow behind `ensureWorkflow`.
 - [campaign-lifecycle-and-audience.md](campaign-lifecycle-and-audience.md): the audience mechanisms you're choosing not to use here.
-- [shareable-containers.md](shareable-containers.md): secure-share's containers, a product built this way.
+- [shareable-containers.md](shareable-containers.md): shareable containers, a file exchange built this way.
 - [custom-data-as-state-machine.md](custom-data-as-state-machine.md): the fallback when a process can't be a workflow.

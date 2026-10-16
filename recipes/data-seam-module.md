@@ -2,8 +2,8 @@
 
 **Use when:** a screen or workflow reasons about many fields whose real source will change over time (a manual entry today, an automated feed tomorrow) and you want the UI to never know or care which.
 **Routes:** n/a — an organizing convention over calls you already make (`POST /api/v2/query`, the custom-data endpoints); not a route of its own.
-**Reference code:** [`lib/toc/seams.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/toc/seams.ts)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 ## Pattern
 
@@ -47,7 +47,7 @@ export async function loadSeamData(journeyId: number, personId: number, orgId: n
     journeyId,
     anchorDate: journeyData.anchorDate as string | undefined,       // CURRENT: journey field. FUTURE: event feed.
     contactPhone,
-    complianceRecord: (journeyData.complianceRecord as ComplianceRecord) ?? emptyComplianceRecord(),
+    complianceRecord: (journeyData.complianceRecord as ComplianceRecord) ?? blankComplianceRecord(),
     orgDefaults: ((orgData.appData as any)?.[appId]?.workflowDefaults) ?? {},
   }
 }
@@ -56,7 +56,7 @@ export async function loadSeamData(journeyId: number, personId: number, orgId: n
 export async function patchComplianceRecord(journeyId: number, patch: Partial<ComplianceRecord>) {
   const read = await fetchCustomData("WorkflowTemplate", journeyId)
   if (!read.success) throw new Error(`Compliance record not saved: ${read.error}`) // unknown ≠ empty
-  const current = (read.data!.complianceRecord as ComplianceRecord) ?? emptyComplianceRecord()
+  const current = (read.data!.complianceRecord as ComplianceRecord) ?? blankComplianceRecord()
   const next = { ...current, ...patch, updatedAt: new Date().toISOString() }
   const res = await appendCustomData(journeyId, { complianceRecord: next }) // flat top-level key: APPEND is safe here
   if (!res.success) throw new Error(`Compliance record not saved: ${res.error}`)

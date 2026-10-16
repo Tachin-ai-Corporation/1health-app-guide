@@ -2,8 +2,8 @@
 
 **Use when:** you need state that belongs to a specific signed-in user (their recent items, a saved filter, a personal setting) rather than to a record that everyone who opens it shares.
 **Routes:** resolve the caller's own Person id (a "who am I" call), then read/write that Person's `customData` — read via `POST /api/v2/query` · write via `POST /api/v2/data/custom-data/bulk` → [agents.md](https://agents.1health.io/public/prod/api/v2/data/custom-data/bulk/agents.md)
-**Reference code:** [`lib/api/recently-viewed.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/recently-viewed.ts#L35)
-**Seen in:** trc-care-coordinator (recently-viewed journeys stored on the signed-in user's own Person)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app (recently-viewed journeys stored on the signed-in user's own Person)
 
 ## Pattern
 

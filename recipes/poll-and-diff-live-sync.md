@@ -2,8 +2,8 @@
 
 **Use when:** several people can act on the same record from different sessions (assign/reassign, a status change) and one viewer's screen needs to reflect another's change without a manual refresh, and there is no webhook/push channel for it.
 **Routes:** `GET /api/v2/journey/{id}` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/agents.md) — poll it on an interval and diff; project only the fields you need to compare.
-**Reference code:** [`hooks/use-assignment-watcher.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/hooks/use-assignment-watcher.ts)
-**Seen in:** trc-care-coordinator
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A care-coordination app
 
 ## Pattern
 
@@ -17,31 +17,34 @@
 ## Minimal example
 
 ```ts
-const POLL_INTERVAL_MS = 30_000
+import { useEffect, useRef, useState } from "react"
 
-function buildKey(ids: number[]): string {
-  return [...ids].sort().join(",")
-}
+const REFRESH_EVERY_MS = 30_000
+const CHANGE_CUE_MS = 3000
+
+// Order-independent fingerprint of only the field being watched.
+const assigneeSignature = (ids: number[]) => ids.slice().sort().join(",")
 
 export function useLiveAssignment(recordId: number | undefined, initialAssigneeIds: number[]) {
   const [assigneeIds, setAssigneeIds] = useState(initialAssigneeIds)
   const [justChanged, setJustChanged] = useState(false)
-  const prevKey = useRef(buildKey(initialAssigneeIds))
+  const lastSignature = useRef(assigneeSignature(initialAssigneeIds))
 
   useEffect(() => {
     if (!recordId) return
-    const interval = setInterval(async () => {
-      const record = await fetchRecord(recordId)                // GET the single-record endpoint
-      const newIds = record.assigneeIds ?? []
-      const newKey = buildKey(newIds)
-      setAssigneeIds(newIds)
-      if (newKey !== prevKey.current) {
-        prevKey.current = newKey
-        setJustChanged(true)
-        setTimeout(() => setJustChanged(false), 3000)
-      }
-    }, POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
+
+    const checkOnce = async () => {
+      const latest = (await fetchRecord(recordId)).assigneeIds ?? []   // GET the single-record endpoint
+      setAssigneeIds(latest)
+      const signature = assigneeSignature(latest)
+      if (signature === lastSignature.current) return                 // nothing meaningful changed
+      lastSignature.current = signature
+      setJustChanged(true)
+      setTimeout(() => setJustChanged(false), CHANGE_CUE_MS)
+    }
+
+    const timer = setInterval(checkOnce, REFRESH_EVERY_MS)
+    return () => clearInterval(timer)
   }, [recordId])
 
   return { assigneeIds, justChanged }

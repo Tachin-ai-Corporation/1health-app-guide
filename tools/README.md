@@ -1,14 +1,17 @@
 # Maintainer tools
 
-Checks to run before publishing changes to this guide. Both need network access to
-agents.1health.io and run in PowerShell 5.1+ or PowerShell 7 (`pwsh`, cross-platform).
+Checks to run before publishing changes to this guide (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+They need network access to agents.1health.io and api.github.com, and run in PowerShell 5.1+ or
+PowerShell 7 (`pwsh`, cross-platform).
 
 | Script | What it checks |
 |---|---|
+| `check-public-refs.ps1` | Every GitHub repo the guide links to is public (asked of GitHub's API without credentials). This repo is public, so a link to a private repo fails the check. |
 | `audit-routes.ps1` | Every `METHOD /api/...` route cited in the guide is documented in 1health's public API docs — in the manifest, or as a `## METHOD /path` heading on its collection's page (the manifest folds many item routes like `/{id}` into their collection page). |
 | `check-doc-links.ps1` | Every agents.1health.io link lands on a page that actually documents a route — not a 404, and not a child-route index. |
 
 ```bash
+pwsh -File tools/check-public-refs.ps1
 pwsh -File tools/audit-routes.ps1 -Out route-audit.md
 pwsh -File tools/check-doc-links.ps1
 ```

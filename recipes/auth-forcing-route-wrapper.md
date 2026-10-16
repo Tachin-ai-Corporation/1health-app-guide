@@ -4,8 +4,8 @@
 anything else, and you want skipping that check to be **structurally impossible**, not just a
 convention someone has to remember.
 **Routes:** n/a — a server-side code-structure pattern, applied around whichever routes need it.
-**Reference code:** [`app/api/expertdx/_lib/route-helpers.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/app/api/expertdx/_lib/route-helpers.ts#L57)
-**Seen in:** expertdx-ordering-provider
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 
@@ -29,32 +29,32 @@ convention someone has to remember.
 ## Minimal example
 
 ```ts
-// route-helpers.ts
-export async function handle<T>(fn: (caller: Caller) => Promise<T>) {
+// route-guard.ts
+// The ONE place a thrown error becomes a status: 401 / 403 / generic 500 (real error logged server-side).
+async function respond<T>(work: () => Promise<T>): Promise<Response> {
   try {
-    return Response.json(await fn(await requireCaller()))
+    return Response.json(await work())
   } catch (error) {
-    return toErrorResponse(error)
+    return errorResponseFor(error)
   }
 }
 
-export async function handleResource<T>(
-  resourceId: unknown,
-  fn: (caller: Caller, id: number, resource: Resource) => Promise<T>,
-) {
-  try {
-    const caller = await requireCaller()
-    const id = coerceId(resourceId) // throws a ForbiddenError on garbage input
-    const resource = await authorizeRecord(caller, id)
-    return Response.json(await fn(caller, id, resource))
-  } catch (error) {
-    return toErrorResponse(error)
-  }
-}
+export const withSignedInUser = <T>(fn: (user: SignedInUser) => Promise<T>) =>
+  respond(async () => fn(await requireSignedInUser()))
+
+export const withOwnedRecord = <T>(
+  rawId: unknown,
+  fn: (user: SignedInUser, id: number, record: OwnedRecord) => Promise<T>,
+) =>
+  respond(async () => {
+    const user = await requireSignedInUser()
+    const id = parseRecordId(rawId) // garbage input throws AccessDeniedError, same as "not yours"
+    return fn(user, id, await authorizeRecord(user, id))
+  })
 
 // app/api/records/[id]/archive/route.ts — the whole route
 export const POST = (_req: Request, { params }: { params: { id: string } }) =>
-  handleResource(params.id, (_caller, id) => archiveRecord(id))
+  withOwnedRecord(params.id, (_user, id) => archiveRecord(id))
 ```
 
 ## Gotchas

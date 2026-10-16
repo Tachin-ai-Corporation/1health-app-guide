@@ -2,8 +2,8 @@
 
 **Use when:** you need to assign or unassign one or more users (e.g. care coordinators) across a batch of records selected in a grid, and show who's already assigned across the whole selection.
 **Routes:** `POST /api/v2/journey/assign-users` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/assign-users/agents.md) · `POST /api/v2/journey/unassign-users` → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/unassign-users/agents.md)
-**Reference code:** [`lib/api/journey.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/lib/api/journey.ts) · [`use-coordinator-management.ts`](https://github.com/Tachin-ai-Corporation/v0-trc-care-coordinator/blob/main/components/data-grid/hooks/use-coordinator-management.ts) (the client-side intersection)
-**Seen in:** trc-care-coordinator
+**Reference code:** [`lib/api/journey.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/journey.ts) (`assignUsersToJourneys`, `unassignUsersFromJourneys`)
+**Seen in:** A care-coordination app
 
 ## Pattern
 
@@ -15,33 +15,23 @@
 ## Minimal example
 
 ```ts
-import { authFetch, getOneHealthBaseUrl } from "@/lib/auth-client"
+import { assignUsersToJourneys, unassignUsersFromJourneys } from "@/lib/api"
 
-// ASSIGN — array-wrapped even for one call.
-async function assignUsersToJourneys(journeyIds: number[], userIds: number[]): Promise<void> {
-  const baseUrl = getOneHealthBaseUrl()
-  const response = await authFetch(`${baseUrl}/api/v2/journey/assign-users`, {
-    method: "POST",
-    body: JSON.stringify([{ journeyIds, userIds }]),
-  })
-  if (!response.ok) throw new Error(`Assign failed: ${response.status}`)
-}
-
-// UNASSIGN — same shape, opposite direction.
-async function removeUsersFromJourneys(journeyIds: number[], userIds: number[]): Promise<void> {
-  const baseUrl = getOneHealthBaseUrl()
-  const response = await authFetch(`${baseUrl}/api/v2/journey/unassign-users`, {
-    method: "POST",
-    body: JSON.stringify([{ journeyIds, userIds }]),
-  })
-  if (!response.ok) throw new Error(`Unassign failed: ${response.status}`)
+// Both helpers POST the array-wrapped body, [{ journeyIds, userIds }], even for one call.
+// UNASSIGN is the same shape in the opposite direction.
+async function changeAssignment(mode: "assign" | "unassign", journeyIds: number[], userIds: number[]): Promise<void> {
+  const send = mode === "assign" ? assignUsersToJourneys : unassignUsersFromJourneys
+  const result = await send(journeyIds, userIds)
+  if (!result.success) throw new Error(`${mode === "assign" ? "Assign" : "Unassign"} failed: ${result.statusCode}`)
 }
 
 // "Assigned to every selected record" — intersect client-side; no such endpoint exists.
-function usersAssignedToAll(selectedRecords: { assignedUserIds: number[] }[]): Set<number> {
-  const [first, ...rest] = selectedRecords.map((r) => new Set(r.assignedUserIds))
-  if (!first) return new Set()
-  return new Set([...first].filter((id) => rest.every((set) => set.has(id))))
+function usersAssignedToAll(rows: { assignedUserIds: number[] }[]): Set<number> {
+  if (rows.length === 0) return new Set()
+  return rows.slice(1).reduce(
+    (common, row) => new Set(row.assignedUserIds.filter((id) => common.has(id))),
+    new Set(rows[0].assignedUserIds),
+  )
 }
 ```
 

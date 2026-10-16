@@ -5,7 +5,7 @@ tenant before it can do anything, and you want it to **self-install on any clien
 idempotently, by name — instead of requiring manual per-tenant setup.
 **Routes:** `GET .../workflow-template-group/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-template-group/list/agents.md) · `GET .../published/list` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-template-group/published/list/agents.md) · `POST .../{id}/clone` → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-template-group/_id_/clone/agents.md) · `GET`/`PUT .../workflow-template/{id}` (`?setAsPublished=true`) → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-template/agents.md) · `POST .../workflow-campaign` (create) → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/agents.md) · `POST .../{id}/run` (activate) → [agents.md](https://agents.1health.io/public/prod/api/v2/health/workflow-campaign/_id_/run/agents.md)
 **Reference code:** [`lib/api/workflow-provisioning.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/workflow-provisioning.ts) · [`lib/api/campaign.ts`](https://github.com/Tachin-ai-Corporation/v0-1h-app-template/blob/main/lib/api/campaign.ts)
-**Seen in:** secure-share, pcp-tcm, template
+**Seen in:** A secure file-sharing app, a transitional-care app, template
 
 ## Pattern
 

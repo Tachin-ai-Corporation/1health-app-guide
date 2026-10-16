@@ -5,8 +5,8 @@ an organization for a given identifier, a tenant by naming convention), and crea
 either a duplicate-conflict 400 or — worse — a real duplicate record that silently succeeds.
 **Routes:** n/a — a technique layered over whichever create endpoint you're using (e.g.
 `POST /api/v2/organization/partner/{id}/contact-point`, `POST /api/v2/tenant`)
-**Reference code:** [`lib/expertdx/registration.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/registration.ts#L433) (`findRegistrationContactPoint` / `createMobileContactPoint`) · [`lib/api/onboarding.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/api/onboarding.ts#L162) (`matchExistingVaultId`, `createTenant`)
-**Seen in:** expertdx, pcp-tcm, patient-vault
+**Reference code:** [`lib/api/onboarding.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/api/onboarding.ts#L162) (`matchExistingVaultId`, `createTenant`)
+**Seen in:** A specialist-consult ordering app, a transitional-care app, patient-vault
 
 ## Pattern
 

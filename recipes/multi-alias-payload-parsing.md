@@ -2,8 +2,8 @@
 
 **Use when:** you read structured data that several external senders populate independently (different payer feeds, different partner systems) and each one spells its fields differently — one sender's block is `adtMessageData` with `MEMBER_FIRST_NAME`, another's is a shape you have never seen a sample of.
 **Routes:** n/a — client-side parsing helper; operates on `customData` already read via `POST /api/v2/query` (see [query-the-data-graph.md](query-the-data-graph.md)).
-**Reference code:** [`lib/api/adt-block.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/adt-block.ts)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 ## Pattern
 
@@ -18,42 +18,44 @@
 ## Minimal example
 
 ```ts
-function norm(key: string): string {
-  return key.toLowerCase().replace(/[^a-z0-9]/g, "")
+type Obj = Record<string, any>
+
+/** Case- and separator-blind, so one alias entry covers camelCase, snake_case and kebab-case alike. */
+const canonicalKey = (key: string) => key.toLowerCase().split(/[^a-z0-9]+/).join("")
+
+/** Compile an alias list once; the reader returns the value of the first key in `obj` matching any alias. */
+function aliasReader(aliases: readonly string[]) {
+  const accepted = new Set(aliases.map(canonicalKey))
+  return (obj: Obj | undefined): unknown =>
+    obj ? Object.entries(obj).find(([key]) => accepted.has(canonicalKey(key)))?.[1] : undefined
 }
 
-function pick(obj: Record<string, any> | undefined, aliases: readonly string[]): unknown {
-  if (!obj) return undefined
-  const wanted = new Set(aliases.map(norm))
-  for (const [key, value] of Object.entries(obj)) {
-    if (wanted.has(norm(key))) return value
-  }
-  return undefined
-}
-
-const NAME_KEYS = ["memberFirstName", "MBR_FIRST_NM", "firstName", "FIRST_NM"] as const
-const STAY_DATE_KEYS = ["admitDate", "ADMT_DT", "dischargeDate", "DSCHRG_DT"] as const
-const BLOCK_KEYS = ["payloadData", "payload", "eventData"] as const
+const readName = aliasReader(["memberFirstName", "MBR_FIRST_NM", "firstName", "FIRST_NM"])
+const readStayDate = aliasReader(["admitDate", "ADMT_DT", "dischargeDate", "DSCHRG_DT"])
+const readBlock = aliasReader(["payloadData", "payload", "eventData"])
 
 /** A name field AND a stay date — either alone is far too common to be distinctive. */
-function looksLikeTargetShape(node: Record<string, any>): boolean {
-  return pick(node, NAME_KEYS) != null && pick(node, STAY_DATE_KEYS) != null
+function looksLikeTargetShape(node: Obj): boolean {
+  return readName(node) != null && readStayDate(node) != null
 }
 
-/** Find the payload block wherever it is: known key first, then by shape. */
-function findBlock(customData: Record<string, any>, maxDepth = 4, maxNodes = 200): Record<string, any> | undefined {
-  const queue: Array<{ node: Record<string, any>; depth: number }> = [{ node: customData, depth: 0 }]
+const nestedObjects = (node: Obj): Obj[] =>
+  Object.values(node).filter((child): child is Obj => !!child && typeof child === "object" && !Array.isArray(child))
+
+/** Find the payload block wherever it is: known key first, then by shape. Breadth-first, bounded. */
+function findBlock(customData: Obj, maxDepth = 4, maxNodes = 200): Obj | undefined {
   let visited = 0
-  while (queue.length && visited < maxNodes) {
-    const { node, depth } = queue.shift()!
-    visited++
-    const hit = pick(node, BLOCK_KEYS)
-    if (hit && typeof hit === "object") return hit as Record<string, any>
-    if (looksLikeTargetShape(node)) return node
-    if (depth >= maxDepth) continue
-    for (const v of Object.values(node)) {
-      if (v && typeof v === "object" && !Array.isArray(v)) queue.push({ node: v, depth: depth + 1 })
+  let level: Obj[] = [customData]
+  for (let depth = 0; level.length > 0; depth++) {
+    const nextLevel: Obj[] = []
+    for (const node of level) {
+      if (++visited > maxNodes) return undefined
+      const block = readBlock(node)
+      if (block && typeof block === "object") return block as Obj
+      if (looksLikeTargetShape(node)) return node
+      if (depth < maxDepth) nextLevel.push(...nestedObjects(node))
     }
+    level = nextLevel
   }
   return undefined
 }

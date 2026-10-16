@@ -4,8 +4,8 @@
 portal) and the session silently fails — cookies set on your origin aren't sent back in the
 third-party context.
 **Routes:** n/a — cookie attributes on the `/api/token` `Set-Cookie` and any client-set cookies.
-**Reference code:** [pcp-tcm `lib/auth-client.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/auth-client.ts) · [patient-vault `lib/auth-client.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/auth-client.ts)
-**Seen in:** v0-1health-pcp-transitional-care-management, patient-vault-official
+**Reference code:** [patient-vault `lib/auth-client.ts`](https://github.com/Tachin-ai-Corporation/patient-vault-official/blob/main/lib/auth-client.ts)
+**Seen in:** A transitional-care app, patient-vault-official
 
 ## Pattern
 

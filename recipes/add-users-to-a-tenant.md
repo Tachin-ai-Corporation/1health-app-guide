@@ -10,7 +10,7 @@ deny / deactivate / renew as their membership evolves.
 
 > **⚠ Not yet in 1health's published API docs:** `POST /api/v3/user-management/pre-approved`, `POST /api/v3/user-management/pre-approved/upload`, and `PUT /api/v3/user-management/user/{id}/status`. 1health supports them for third-party apps, but agents.1health.io has no page for them yet — the shapes shown here come from working apps. Test them against demo before you rely on them.
 
-**Reference code:** [`lib/api/patient.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/patient.ts#L436) (the `user/invite` call shape — that app uses different flags for a different purpose) — no public example calls the pre-approval endpoints; see the Minimal example for that shape.
+**Reference code:** none public — see the Minimal example.
 **Seen in:** 1health platform usage
 
 ## Pattern
@@ -57,13 +57,13 @@ const CONFIRM_ABOVE_ROWS = 1000 // surface a confirmation in the UI above this c
 interface PreApproveRow { email: string; role: string }
 
 /** Client-side gate before ever uploading a CSV — the backend never sees a dropped row. */
-function cleanRows(rows: PreApproveRow[], validRoleNames: Set<string>): PreApproveRow[] {
-  const seen = new Set<string>()
+function validateAllowlistRows(rows: PreApproveRow[], validRoleNames: Set<string>): PreApproveRow[] {
+  const acceptedEmails = new Set<string>()
   return rows
     .filter((r) => {
       const email = r.email.trim().toLowerCase()
-      if (!email.includes("@") || seen.has(email) || !validRoleNames.has(r.role)) return false
-      seen.add(email)
+      if (!email.includes("@") || acceptedEmails.has(email) || !validRoleNames.has(r.role)) return false
+      acceptedEmails.add(email)
       return true
     })
     .slice(0, MAX_BULK_ROWS) // hard cap — warn separately once rows.length > CONFIRM_ABOVE_ROWS
@@ -73,7 +73,7 @@ function cleanRows(rows: PreApproveRow[], validRoleNames: Set<string>): PreAppro
 async function preApproveBulk(cleanedCsv: File) {
   const baseUrl = getOneHealthBaseUrl()
   const form = new FormData()
-  form.append("file", cleanedCsv) // already filtered by cleanRows() — only passing rows go up
+  form.append("file", cleanedCsv) // already filtered by validateAllowlistRows() — only passing rows go up
   const res = await authFetch(`${baseUrl}/api/v3/user-management/pre-approved/upload`, { method: "POST", body: form })
   if (!res.ok) throw new Error(`Bulk upload failed: ${res.status}`)
   // The response's task id is not polled anywhere — watch the import/export log grid instead.

@@ -10,9 +10,8 @@ per-page poller being the only thing that can ever finish a job.
 [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md) + `GET /api/v2/journey/{id}/steps`
 (bounded fan-out) → [agents.md](https://agents.1health.io/public/prod/api/v2/journey/_id_/steps/agents.md)
 + your own async-job status/result endpoints (not 1health).
-**Reference code:** [`jobs.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/jobs.ts#L81) ·
-[`jobs/poll/route.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/app/api/expertdx/jobs/poll/route.ts#L44)
-**Seen in:** expertdx (case extraction + AI diagnostics queue)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app (case extraction + AI diagnostics queue)
 
 ## Pattern
 
@@ -31,7 +30,7 @@ per-page poller being the only thing that can ever finish a job.
 ## Minimal example
 
 ```ts
-const MAX_ADVANCE = 8
+const JOBS_PER_POLL = 8
 
 async function advanceInFlightJobs(campaignId: number) {
   const rows = await runQueryRows({
@@ -41,7 +40,7 @@ async function advanceInFlightJobs(campaignId: number) {
   })
   const inFlight = rows
     .filter((r) => parseCustomData(findAttr(r, "customData"))?.jobIndex?.status === "running")
-    .slice(0, MAX_ADVANCE)
+    .slice(0, JOBS_PER_POLL)
 
   for (const row of inFlight) await advanceJob(findAttr<number>(row, "id")!)  // the one shared harvester
 }

@@ -7,8 +7,8 @@ of the caller's own token — the platform refuses the op to their role, there's
 yet, or you're verifying a claim the caller made — and the privilege needs to stay auditable rather
 than spread through the codebase by habit.
 **Routes:** n/a — an architecture pattern for *which credential* calls 1health, not a route.
-**Reference code:** [`lib/expertdx/identity.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/identity.ts#L60) · [`lib/expertdx/server.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/lib/expertdx/server.ts#L47)
-**Seen in:** expertdx-ordering-provider (narrower forms in v0-1health-secure-share, pcp-tcm)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app (narrower forms in a secure file-sharing app, a transitional-care app)
 
 ## Pattern
 
@@ -30,21 +30,24 @@ than spread through the codebase by habit.
 ## Minimal example
 
 ```ts
-// identity.ts — the manifest, imported by the code AND a CI check script
-export const SERVICE_KEY_CALLS = {
-  "case/create": { reason: "PLATFORM", why: "A partner-org token cannot create a journey on our campaign." },
-  "case/authorize": { reason: "TRUST", why: "Answers whether the caller owns this case — can't ask the caller." },
-} as const satisfies Record<string, { reason: string; why: string }>
+// privileged-ops.ts — the manifest, imported by the code AND by a CI check script
+type Basis = "role-refused" | "no-session" | "cross-tenant" | "verifies-claim" // "convenient" is not on the list
+export type PrivilegedOp = "records/create" | "records/authorize"
 
-// server.ts — server-only; the ONE place the key touches a request
+// Typed by the union above, so an op without a recorded basis doesn't compile.
+export const PRIVILEGED_OPS: Record<PrivilegedOp, { basis: Basis; note: string }> = {
+  "records/create": { basis: "role-refused", note: "The platform rejects this create for the caller's role (measured)." },
+  "records/authorize": { basis: "verifies-claim", note: "Decides whether the caller owns the record; it can't run as the caller." },
+}
+
+// service-transport.ts — server-only; the ONE place the key touches a request
 import "server-only"
-export async function serviceCall<T>(context: keyof typeof SERVICE_KEY_CALLS, path: string, init: RequestInit = {}): Promise<T> {
-  if (!(context in SERVICE_KEY_CALLS)) throw new Error(`${context} is not in the service-key manifest`)
-  const res = await fetch(`${baseUrl()}${path}`, {
-    ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${process.env.SERVICE_KEY}` },
-  })
-  return res.json() as Promise<T>
+export async function serviceCall<T>(op: PrivilegedOp, path: string, init: RequestInit = {}): Promise<T> {
+  if (!(op in PRIVILEGED_OPS)) throw new Error(`${op} is not in the privileged-operations manifest`)
+  const signed = new Headers(init.headers)
+  signed.set("Authorization", `Bearer ${process.env.SERVICE_KEY}`)
+  const res = await fetch(`${baseUrl()}${path}`, { ...init, headers: signed })
+  return (await res.json()) as T
 }
 ```
 

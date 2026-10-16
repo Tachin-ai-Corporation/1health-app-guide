@@ -3,8 +3,8 @@
 **Use when:** you want session context (org id, user id, tenant config) available the instant the
 app loads, without adding a second server route or a client round-trip on first paint.
 **Routes:** `GET /api/v2/tenant` → [agents.md](https://agents.1health.io/public/prod/api/v2/tenant/agents.md) (called server-side, once, right after token exchange)
-**Reference code:** [query-helper `app/api/token/route.tsx`](https://github.com/chill-tachin/v0-1h-query-helper/blob/main/app/api/token/route.tsx)
-**Seen in:** v0-1h-query-helper, v0-1health-secure-share, v0-trc-care-coordinator
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A query-builder tool, a secure file-sharing app, a care-coordination app
 
 ## Pattern
 

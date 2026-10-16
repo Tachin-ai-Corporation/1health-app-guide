@@ -2,8 +2,8 @@
 
 **Use when:** a user can land on a deep, specific view (reached by search, a bookmark, browser back/forward, or a shared link) with no client-side state already loaded — the page must reconstruct everything it shows from the URL alone.
 **Routes:** n/a — reuses whichever read route the view already calls (see [query-the-data-graph.md](query-the-data-graph.md) / [grid-list-views.md](grid-list-views.md)); this recipe governs *when* you call it, not a route of its own.
-**Reference code:** [`components/home-page-client.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/components/home-page-client.tsx), [`contexts/navigation-context.tsx`](https://github.com/Tachin-ai-Corporation/v0-1health-secure-share/blob/main/contexts/navigation-context.tsx)
-**Seen in:** secure-share · 1health platform usage (resolve-once-into-URL, step deep-linking)
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A secure file-sharing app · 1health platform usage (resolve-once-into-URL, step deep-linking)
 
 ## Pattern
 
@@ -31,34 +31,35 @@
 ## Minimal example
 
 ```tsx
-function useUrlParam(key: string): string | null {
+// The URL is the durable record of "which view, which record".
+function readQueryParam(key: string): string | null {
   return new URLSearchParams(window.location.search).get(key)
 }
 
 function AppShell() {
-  const { currentView, setCurrentView } = useNavigation()
+  const { view, goTo } = useViewRouter()   // your pushState-backed view switcher
   const [detail, setDetail] = useState<DetailData | null>(null)
-  const needsRestore = currentView === "detail" && !detail
-  const idsParam = needsRestore ? useUrlParam("ids") : null
+  const tenantId = user?.tenantId
 
-  useSWR(
-    idsParam && user?.tenantId ? `restore:${idsParam}:${user.tenantId}` : null,
-    async () => {
-      const targetIds = new Set(idsParam!.split(",").map(Number))
-      const page = await fetchListPage(0, 100)                // SAME call the normal nav path uses
-      const match = page.data.find((row) => targetIds.has(row.id))
-      if (!match) { setCurrentView("list"); return null }      // safe fallback, not a broken render
-      setDetail(toDetailData(match))
-      return null
-    },
-  )
+  // Fresh load, shared link or back button: on the detail view with nothing in memory yet.
+  const idsToRestore = view === "detail" && !detail ? readQueryParam("ids") : null
 
-  return currentView === "detail"
-    ? detail ? <DetailView data={detail} /> : <LoadingState />
-    : <ListView onOpen={(row) => {
-        setDetail(toDetailData(row))
-        setCurrentView("detail", { ids: String(row.id) })
-      }} />
+  useSWR(idsToRestore && tenantId ? ["restore-detail", idsToRestore, tenantId] : null, async () => {
+    const wanted = idsToRestore!.split(",").map(Number)
+    const { data: rows } = await fetchListPage(0, 100)            // SAME call the normal nav path uses
+    const hit = rows.find((row) => wanted.includes(row.id))
+    if (hit) setDetail(toDetailData(hit))
+    else goTo("list")                                              // safe fallback, not a broken render
+    return null
+  })
+
+  if (view !== "detail") {
+    return <ListView onOpen={(row) => {
+      setDetail(toDetailData(row))
+      goTo("detail", { ids: String(row.id) })
+    }} />
+  }
+  return detail ? <DetailView data={detail} /> : <LoadingState />
 }
 ```
 

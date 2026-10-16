@@ -7,8 +7,8 @@ store. If what you're attaching is specifically a lab/test result rather than ge
 documentation, a more specific ingestion family exists — see
 [results-ingestion.md](results-ingestion.md) — and is usually the better fit.
 **Routes:** `POST /v2/person/{id}/medical-record` → [route docs](https://agents.1health.io/public/prod/api/manifest.md) · read-back via `POST /api/v2/query` → [agents.md](https://agents.1health.io/public/prod/api/v2/query/agents.md)
-**Reference code:** [`lib/api/medical-record.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/medical-record.ts) · [`lib/api/cqd.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/api/cqd.ts)
-**Seen in:** pcp-tcm, expertdx
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app, a specialist-consult ordering app
 
 ## Pattern
 
@@ -41,12 +41,27 @@ documentation, a more specific ingestion family exists — see
 ```ts
 import { callApi, runQueryRows, getRelated } from "@/lib/api"
 
-type EncounterClassification = "Unknown" | "Inpatient" | "Outpatient" | "Both inpatient and outpatient"
-function toEncounterClassification(value: unknown): EncounterClassification {
-  const s = typeof value === "string" ? value.trim().toLowerCase() : ""
-  if (s === "outpatient" || s === "office_visit") return "Outpatient"
-  if (s === "inpatient") return "Inpatient"
-  return "Unknown" // never guess a clinical classification you can't support
+// 1health's closed `encounterClassification` vocabulary.
+type EncounterKind = "Unknown" | "Inpatient" | "Outpatient" | "Both inpatient and outpatient"
+
+// Vendor spellings we can map with confidence, keyed lowercase.
+const VENDOR_ENCOUNTER_WORDS = new Map<string, EncounterKind>([
+  ["inpatient", "Inpatient"],
+  ["outpatient", "Outpatient"],
+  ["office_visit", "Outpatient"],
+])
+
+function coerceEncounterKind(raw: unknown): EncounterKind {
+  const mapped = typeof raw === "string" ? VENDOR_ENCOUNTER_WORDS.get(raw.trim().toLowerCase()) : undefined
+  return mapped ?? "Unknown" // never guess a clinical classification you can't support
+}
+
+// Forward every entry verbatim except the one field 1health validates.
+function withPlatformVocabulary(entry: Record<string, unknown>): Record<string, unknown> {
+  if (!("encounterClassification" in entry)) return entry
+  const fixed = { ...entry }
+  fixed.encounterClassification = coerceEncounterKind(entry.encounterClassification)
+  return fixed
 }
 
 function parseRejectedDefinitions(detail: string): string[] {
@@ -58,11 +73,7 @@ export async function attachExternalRecord(
   personId: number,
   input: { name: string; fileId: number; entries: Array<Record<string, unknown>> },
 ) {
-  let entries = input.entries.map((e) =>
-    "encounterClassification" in e
-      ? { ...e, encounterClassification: toEncounterClassification(e.encounterClassification) }
-      : e,
-  )
+  let entries = input.entries.map(withPlatformVocabulary)
   let typeName: string | undefined = "Discharge Summary" // an ambition, not a guarantee
 
   for (let attempt = 0; attempt < 3; attempt++) {

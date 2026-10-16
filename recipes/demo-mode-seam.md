@@ -4,8 +4,8 @@
 
 **Use when:** you need a fully-functional demo of your app (same components, same workflow) running against **invented data**, possibly side-by-side with a real session in another tab, without ever touching the real session's cookies.
 **Routes:** n/a — an auth/session-layer seam; the demo path answers its own requests instead of calling 1health at all.
-**Reference code:** [`lib/demo/demo-session.ts`](https://github.com/Tachin-ai-Corporation/v0-1health-pcp-transitional-care-management/blob/main/lib/demo/demo-session.ts)
-**Seen in:** pcp-tcm
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A transitional-care app
 
 ## Pattern
 
@@ -18,20 +18,24 @@
 ## Minimal example
 
 ```ts
-export const DEMO_BASE_URL = "https://sandbox.example.invalid"   // RFC 2606 reserved — can never resolve
-let active = false
+export const FIXTURE_BASE_URL = "https://fixtures.example.invalid" // RFC 2606 reserved — can never resolve
 
-export function activateDemoMode(): void { active = true }        // one-way; a page load is the only exit
-export function demoModeActive(): boolean { return active }
+// null = demo off. Set once and never cleared; a page load is the only exit.
+let demoSession: Readonly<Record<string, string>> | null = null
 
-function demoJar(): Record<string, string> {
-  return { access_token: "demo.token", onehealth_base_url: DEMO_BASE_URL /* ...fixture ids... */ }
+export function startDemoSession(): void {
+  demoSession ??= Object.freeze({
+    access_token: "demo.token",
+    onehealth_base_url: FIXTURE_BASE_URL,
+    // ...fixture ids...
+  })
 }
+export const isDemoSession = (): boolean => demoSession !== null
 
 /** The ONE seam every token/id accessor funnels through. */
-export function demoCookie(name: string): string | null | undefined {
-  if (!active) return undefined        // "not my business" — caller reads the real cookie
-  return demoJar()[name] ?? null       // "this cookie doesn't exist" — the real missing-cookie shape
+export function fromDemoSession(name: string): string | null | undefined {
+  if (demoSession === null) return undefined // "not my business" — caller reads the real cookie
+  return demoSession[name] ?? null // "this cookie doesn't exist" — the real missing-cookie shape
 }
 ```
 

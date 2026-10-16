@@ -9,8 +9,8 @@ your own API response's field paths — see Pattern step 6.
 **Routes:** n/a — client helper (produces a `File` that then goes through whichever upload/attach
 recipe you're already using — see [patient-documents.md](patient-documents.md) /
 [attachments.md](attachments.md)).
-**Reference code:** [`components/intake/text-to-pdf.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/components/intake/text-to-pdf.ts) · [`components/mobile/photos-to-pdf.ts`](https://github.com/chill-tachin/expertdx-ordering-provider/blob/main/components/mobile/photos-to-pdf.ts)
-**Seen in:** expertdx
+**Reference code:** none public — see the Minimal example.
+**Seen in:** A specialist-consult ordering app
 
 ## Pattern
 
@@ -42,38 +42,50 @@ recipe you're already using — see [patient-documents.md](patient-documents.md)
 import { jsPDF } from "jspdf"
 import Handlebars from "handlebars"
 
-const A4_W = 595.28, A4_H = 841.89, MARGIN = 48
+// A4 portrait in PDF points.
+const PAGE = { width: 595.28, height: 841.89, margin: 48 }
+const BODY = { size: 11, leading: 15 }
+const CONTENT = { width: PAGE.width - 2 * PAGE.margin, height: PAGE.height - 2 * PAGE.margin }
+
+const pdfFile = (blob: Blob, name: string) => new File([blob], name, { type: "application/pdf" })
 
 // Text -> PDF: wrap, paginate, preserve paragraph breaks.
-export function textToPdf(text: string, fileName: string): File {
-  const doc = new jsPDF({ unit: "pt", format: "a4" })
-  doc.setFont("helvetica", "normal").setFontSize(11)
-  const maxWidth = A4_W - MARGIN * 2
+export function composeTextDocument(text: string, name: string): File {
+  const doc = new jsPDF({ unit: "pt", format: "a4" }).setFont("helvetica", "normal").setFontSize(BODY.size)
 
-  const lines: string[] = []
-  for (const para of text.replace(/\r\n/g, "\n").split("\n")) {
-    lines.push(...(para.trim() ? (doc.splitTextToSize(para, maxWidth) as string[]) : [""]))
+  // A blank input line stays a blank output line, so paragraph spacing survives.
+  const wrapped: string[] = text
+    .split(/\r?\n/)
+    .flatMap((para) => (para.trim() ? doc.splitTextToSize(para, CONTENT.width) : [""]))
+
+  const rowsPerPage = Math.floor(CONTENT.height / BODY.leading) + 1
+  for (let first = 0; first < wrapped.length; first += rowsPerPage) {
+    if (first > 0) doc.addPage()
+    wrapped.slice(first, first + rowsPerPage).forEach((row, i) => {
+      if (row) doc.text(row, PAGE.margin, PAGE.margin + i * BODY.leading)
+    })
   }
-  let y = MARGIN
-  for (const line of lines) {
-    if (y > A4_H - MARGIN) { doc.addPage(); y = MARGIN }
-    if (line) doc.text(line, MARGIN, y)
-    y += 15
-  }
-  return new File([doc.output("blob")], fileName, { type: "application/pdf" })
+  return pdfFile(doc.output("blob"), name)
+}
+
+type PageImage = { jpegDataUrl: string; width: number; height: number }
+
+// Shrink to fit the content box (never enlarge), then center on the page.
+function placeOnPage({ width, height }: PageImage) {
+  const ratio = Math.min(1, CONTENT.width / width, CONTENT.height / height)
+  const w = width * ratio, h = height * ratio
+  return { x: (PAGE.width - w) / 2, y: (PAGE.height - h) / 2, w, h }
 }
 
 // Photos -> PDF: downscale, one image per page, fit-to-page.
-export function photosToPdf(photos: Array<{ dataUrl: string; width: number; height: number }>, fileName: string): File {
+export function composePhotoDocument(images: PageImage[], name: string): File {
   const doc = new jsPDF({ unit: "pt", format: "a4" })
-  const maxW = A4_W - MARGIN * 2, maxH = A4_H - MARGIN * 2
-  photos.forEach((photo, i) => {
-    if (i > 0) doc.addPage()
-    const scale = Math.min(maxW / photo.width, maxH / photo.height, 1)
-    const w = photo.width * scale, h = photo.height * scale
-    doc.addImage(photo.dataUrl, "JPEG", (A4_W - w) / 2, (A4_H - h) / 2, w, h)
-  })
-  return new File([doc.output("blob")], fileName, { type: "application/pdf" })
+  for (const [index, image] of images.entries()) {
+    if (index !== 0) doc.addPage()
+    const { x, y, w, h } = placeOnPage(image)
+    doc.addImage(image.jpegDataUrl, "JPEG", x, y, w, h)
+  }
+  return pdfFile(doc.output("blob"), name)
 }
 
 // A data-driven alternative: bind placeholders to your own API response's field paths, and
