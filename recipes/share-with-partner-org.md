@@ -36,7 +36,7 @@ making them a member of your tenant.
 ## Minimal example
 
 ```ts
-import { shareCampaignWithPartner, unshareCampaignWithPartner, fetchCampaign } from "@/lib/api"
+import { callApi, shareCampaignWithPartner, fetchCampaign } from "@/lib/api"
 
 // Grant a partner organization read access to everything under this campaign.
 const result = await shareCampaignWithPartner(campaignId, partnerOrgId, "Read")
@@ -46,8 +46,13 @@ if (!result.success) throw new Error(result.error)
 const campaign = await fetchCampaign(campaignId)
 const alreadyShared = campaign.data?.sharedPartnerOrganizations?.some((p) => p.id === partnerOrgId)
 
-// Revoke it later — a real unshare, not a re-share with an empty grant list.
-await unshareCampaignWithPartner(campaignId, partnerOrgId)
+// Revoke it later — a real unshare, not a re-share with an empty grant list. The template wraps
+// only share, so call unshare directly: the same grant shape, minus the access level.
+const revoked = await callApi("campaign/unshare", `/api/v2/health/workflow-campaign/${campaignId}/unshare`, {
+  method: "POST",
+  body: JSON.stringify([{ targetAccessEntity: "Partner Organization", targetEntityId: partnerOrgId }]),
+})
+if (!revoked.success) throw new Error(revoked.error)
 ```
 
 For a raw multi-target grant, build the array yourself:

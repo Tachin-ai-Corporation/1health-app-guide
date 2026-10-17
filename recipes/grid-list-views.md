@@ -48,7 +48,7 @@ back pre-flattened, with a standard paginated envelope.
 ## Minimal example
 
 ```ts
-import { runGridQuery } from "@/lib/api"
+import { runGridQuery, type FilterCondition } from "@/lib/api"
 
 interface FetchAllResult<T> {
   rows: T[]
@@ -78,7 +78,8 @@ export async function fetchAllRows<T>(
   let reachedEnd = false
 
   for (let page = 0; page < maxPages && !reachedEnd; page++) {
-    const res = await runGridQuery<T>(view, { filterBy, page, size: pageSize })
+    // The template types filterBy with only its five core operators; the grid accepts the wider set above.
+    const res = await runGridQuery<T>(view, { filterBy: filterBy as unknown as FilterCondition[], page, size: pageSize })
     if (!res.success || !res.data) break
 
     const { data, totalElements, lastPage } = res.data

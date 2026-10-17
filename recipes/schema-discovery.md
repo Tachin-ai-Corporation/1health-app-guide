@@ -26,7 +26,7 @@
 7. Derive list/grid columns from this same schema instead of hand-declaring them: map each
    attribute to a column definition — `attrKey`, display name, a filter widget chosen by the
    attribute's declared type, and (for an enumerated attribute) its own value-list option set as the
-   filter's choices, minus any reserved "unset" placeholder entry. Fetch once per grid mount and
+   filter's choices, minus the reserved "unset" placeholder (`"n/a"`). Fetch once per grid mount and
    memoize; a hand-authored static column list is still the better fit when a grid mixes fields from
    more than one type.
 
@@ -41,7 +41,7 @@
 ## Minimal example
 
 ```ts
-import { fetchTypeDetails, fetchTypeById, prefetchTypeDetails, operatorsForType, BASELINE_ATTRIBUTES } from "@/lib/api"
+import { callApi, fetchTypeDetails, prefetchTypeDetails, operatorsForType, BASELINE_ATTRIBUTES } from "@/lib/api"
 
 // One type, cached + deduped even if called from several components at once.
 const person = (await fetchTypeDetails("Person")).data!
@@ -55,15 +55,20 @@ const byType = await prefetchTypeDetails(["Person", "Organization", "Insurance"]
 const birthDate = person.attributes.find((a) => a.attrKey === "birthDate")!
 operatorsForType(birthDate.type) // => ["==","!=","=gt=","=ge=","=lt=","=le=","range"]
 
-// Fallback: resolve by numeric class id (e.g. from a relationship's own target class id).
-const byId = (await fetchTypeById(insuranceRel.toClassId)).data!
+// Fallback: resolve by numeric class id (e.g. a relationship's target class id from an earlier
+// response). The template wraps only the by-name route, so call this one directly. It returns the
+// same raw shape, but uncached and with deleted entries still in it — drop those yourself.
+type RawType = { boKey: string; attributes: Array<{ attrKey: string; name: string; isDeleted?: boolean }> }
+const byIdRes = await callApi<RawType | RawType[]>("schema/typeById", `/api/v2/type/${targetClassId}`)
+const target = Array.isArray(byIdRes.data) ? byIdRes.data[0] : byIdRes.data
+const targetAttributes = target?.attributes.filter((a) => !a.isDeleted) ?? []
 
 // Derive grid columns straight from the schema instead of hand-declaring them.
 const columns = person.attributes.map((a) => ({
   field: a.attrKey,
   headerName: a.name,
   operators: operatorsForType(a.type),                     // reuse the same type→operator mapping
-  options: a.attributeValues?.filter((v) => !v.isDefaultPlaceholder).map((v) => v.name),
+  options: a.attributeValues?.filter((v) => v.name !== "n/a").map((v) => v.name), // "n/a" = the unset placeholder
 }))
 ```
 
@@ -84,8 +89,10 @@ const columns = person.attributes.map((a) => ({
 - A data-fetching/query-cache library (keyed by type name, with an explicit stale time) is a fine
   drop-in for the in-memory cache in step 3 — you don't have to hand-roll the map, just make sure
   concurrent callers for the same type still dedupe.
-- Every enumerated attribute's option set can include a hidden platform-default placeholder entry —
-  filter it out before presenting choices, whether you're building a form or deriving a grid filter.
+- Every enumerated attribute's option set includes the platform's unset placeholder, an option named
+  `"n/a"` (every value list on `Person` had one on demo, 2026-10-16; see
+  [sentinel-values-not-null.md](sentinel-values-not-null.md)). There's no flag marking it, so filter
+  it out by name before presenting choices, whether you're building a form or deriving a grid filter.
 - A *relationship's target type's* own value-list metadata is nested one level down (under that
   relationship's own attribute list, not the root type's) — a picker for a related record's field
   needs to look there instead.
