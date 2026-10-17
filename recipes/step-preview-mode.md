@@ -27,7 +27,7 @@ order or journey.
 ## Minimal example
 
 ```ts
-import { fetchStepConfiguration, fetchStepInfo, submitStepFields } from "@/lib/api"
+import { fetchStepConfiguration, fetchStepInfo, submitStepFields, type DynamicField } from "@/lib/api"
 
 // Live: journeyId is defined. Preview: journeyId is undefined. Same downstream renderer either way.
 async function loadStepForRender(templateId: number, stepId: number, journeyId?: number) {
@@ -38,7 +38,7 @@ async function loadStepForRender(templateId: number, stepId: number, journeyId?:
   return { configuration, journeyId }
 }
 
-function submitStep(journeyId: number | undefined, stepId: number, fields: unknown[], values: Record<string, unknown>) {
+function submitStep(journeyId: number | undefined, stepId: number, fields: DynamicField[], values: Record<string, unknown>) {
   if (journeyId === undefined) {
     // Preview: local state only, no network call.
     return { status: "Completed", submittedAt: new Date().toISOString(), values }
