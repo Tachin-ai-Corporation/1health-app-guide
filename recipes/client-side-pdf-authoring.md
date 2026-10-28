@@ -35,6 +35,12 @@ recipe you're already using — see [patient-documents.md](patient-documents.md)
    and production. Once any version of a template has actually been sent to someone, **version the
    whole template file by date** rather than editing it in place, so a previously sent document's
    exact wording stays reconstructable later.
+7. **Compose multi-photo *uploads* too, not just camera captures.** When a user adds two or more
+   images at once (gallery pick, drag and drop), compose them into one PDF before uploading. PDFs
+   and TIFFs (often multi-page faxes) upload as they are. Split into "part 1 of 2" only to stay
+   under the upload cap, keeping every page in order. A downstream extraction pipeline reads one
+   multi-page document as a whole, and faster, than the same pages as separate images — see
+   [phone-camera-capture-to-one-pdf.md](phone-camera-capture-to-one-pdf.md).
 
 ## Minimal example
 
@@ -110,6 +116,11 @@ export function renderCoverSheet(data: Record<string, unknown>): string {
   real PDF text over rendering text to a canvas/image.
 - **Downscale photos before composing, not after** — embedding full-resolution camera images
   routinely blows past upload size limits on a multi-page capture.
+- **Uploaded screenshots need more detail than camera frames** — keep up to about 2600 px at
+  quality about 0.85; dense tables become hard to read at 1600 px.
+- **Transparent PNGs turn black when drawn into a JPEG** — paint a white background first.
+- **HEIC decodes in the browser only in Safari** — elsewhere, upload a HEIC file on its own rather
+  than failing the batch.
 - **Enforce one size/length cap in both the UI control and the composer function** — if only one of
   them checks, the other path can still produce an oversized document.
 - **This produces a `File` in memory; you still need to run it through your normal upload/attach
@@ -118,6 +129,8 @@ export function renderCoverSheet(data: Record<string, unknown>): string {
 ## Related
 
 - [patient-documents.md](patient-documents.md) — a typical destination for the produced file.
+- [phone-camera-capture-to-one-pdf.md](phone-camera-capture-to-one-pdf.md) — a phone-camera capture
+  flow that ends in one composed PDF.
 - [external-job-pipeline.md](external-job-pipeline.md) — the typical next step once the file is
   uploaded.
 - [platform-generated-documents.md](platform-generated-documents.md) — when 1health can generate
