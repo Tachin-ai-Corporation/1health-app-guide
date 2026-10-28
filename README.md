@@ -47,7 +47,7 @@ illustration.
 
 ## Status
 
-**Published — `guide_version` 0.5.4 (draft).** Setup docs plus ~125 recipes across 14 categories,
+**Published — `guide_version` 0.5.5 (draft).** Setup docs plus ~125 recipes across 14 categories,
 including:
 - a QA standard: sign in as each role on local and dev/stage builds;
 - a population-health section: the command center, covering cohorts, snapshots, and

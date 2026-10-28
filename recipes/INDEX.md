@@ -77,6 +77,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [bulk-tagging](bulk-tagging.md) | Tag instances in bulk (GraphQL list + REST apply/remove) |
 | [bulk-assignment](bulk-assignment.md) | Assign/unassign users to journeys in bulk |
 | [saved-grid-views](saved-grid-views.md) | Personal and shared saved grid views (`/v2/grid-config`) |
+| [phone-camera-capture-to-one-pdf](phone-camera-capture-to-one-pdf.md) | Hand off to a phone by QR or text, capture pages with its camera, upload one PDF to the step |
 
 ## Sharing & partner orgs
 | Recipe | For |
@@ -191,6 +192,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [qa-launch-with-api-key](qa-launch-with-api-key.md) | Sign a local or dev/stage build in as each QA role (never production) |
 | [survive-an-auth-redirect](survive-an-auth-redirect.md) | Keep your params intact across a hosted-login redirect |
 | [iframe-embedding-cookies](iframe-embedding-cookies.md) | Cookies that survive a cross-site iframe (CHIPS) |
+| [add-a-phone-for-mfa](add-a-phone-for-mfa.md) | Let a signed-in user add and confirm their own mobile so 1health MFA can text them codes |
 | [server-side-signout](server-side-signout.md) · **adv** | Complete server-side sign-out |
 | [return-to-path](return-to-path.md) · **adv** | Return-to path across a hosted-login bounce |
 | [auth-url-branding](auth-url-branding.md) · **adv** | Brand the hosted login/registration pages |

@@ -108,12 +108,15 @@ async function pinLooksValid(orgUuid: string, code: string): Promise<boolean> {
 - **The non-consuming check and the fax check both answer a bare yes/no** — don't let a catch-all
   error handler leak extra backend text past that boolean.
 - **None of this is MFA.** These endpoints prove someone controls a channel; they don't gate a
-  second factor on an existing login.
+  second factor on an existing login. To make a verified mobile an MFA channel, see
+  [add-a-phone-for-mfa.md](add-a-phone-for-mfa.md) — the text link 1health sends there is what calls
+  `/v2/public/contact-point/verify`.
 
 ## Related
 
 - [custom-otp.md](custom-otp.md) — the fallback for an already-authenticated user whose credential
   the *authenticated* OTP endpoints refuse.
+- [add-a-phone-for-mfa.md](add-a-phone-for-mfa.md) — how a verified mobile becomes an MFA channel.
 - [add-users-to-a-tenant.md](add-users-to-a-tenant.md), [partner-invitation-and-pin.md](partner-invitation-and-pin.md) —
   flows that actually consume a PIN this recipe's non-consuming check only previews.
 - Concepts: [setup/rules-of-the-road.md](../setup/rules-of-the-road.md)

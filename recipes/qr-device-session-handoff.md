@@ -29,7 +29,7 @@ export async function mintHandoffLink(owner: ServerCaller, recordId: number, ses
   const ticket = { nonce, expiresAt: Date.now() + HANDOFF_TTL_MS, used: false } // never the session itself
   await appendTopLevelKey(owner, recordId, HANDOFF_KEY, ticket) // replaces any older ticket on the record
   const fragment = encryptForLink(session) // AES-256-GCM, HKDF-derived key
-  return `${appUrl}/handoff/${recordId}#${fragment}` // fragment — never sent to any server
+  return `${appUrl}/handoff/${recordId}#${nonce}.${fragment}` // both in the fragment — never sent to any server
 }
 
 // redeem — server-only; no client session exists yet, so this rebuilds one from the seal
@@ -54,9 +54,13 @@ export async function redeemHandoff(recordId: number, nonce: string, fragment: s
 - **Burn the ticket before returning the session**, or two near-simultaneous redemptions can both succeed.
 - **Use an authenticated cipher (GCM)** and collapse every decrypt failure into one "corrupt" result — never throw on a tampered blob.
 - **This grants a capability, not a login** — anyone holding the un-redeemed link gets the session, so size the TTL to "long enough to glance at a second device," not longer.
+- **Link-preview scanners open links with GET.** Messaging apps fetch a link to build its preview, so a link that redeems on GET arrives already spent. Let a GET only peek (valid or not, plus a non-sensitive label); redeem and burn only on an explicit POST, such as a "Start" tap.
+- **Clear the second device's session cookies with the same attributes they were set with** (e.g. `Secure; SameSite=None; Partitioned`). A clear with different attributes writes a different cookie and leaves the live session in place.
+- **Deliver one link by QR *or* by text through a single minting function.** The two should differ only in delivery, never in how the session is sealed; text it only to a verified mobile ([add-a-phone-for-mfa.md](add-a-phone-for-mfa.md)).
 
 ## Related
 
+- [phone-camera-capture-to-one-pdf.md](phone-camera-capture-to-one-pdf.md) — a full capture flow built on this hand-off.
 - [provider-minted-magic-link.md](provider-minted-magic-link.md)
 - [capability-probe.md](capability-probe.md)
 - Concepts: [setup/auth-and-launch.md](../setup/auth-and-launch.md)
