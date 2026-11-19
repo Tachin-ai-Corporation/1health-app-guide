@@ -14,6 +14,7 @@
 3. Put the sealed bundle in the QR link's URL **fragment**, never its path or query — fragments are never sent to any server by the browser, so the credential never touches an access log, a referrer header, or a request trace.
 4. The second device posts the fragment + nonce to a redeem endpoint, which: opens the seal first (a foreign/tampered blob fails cleanly here, rather than surfacing as a false "expired") → uses the now-recovered session to verify the nonce against the burn record → writes `used: true` **before** returning anything → only then hands the session to the second device. A concurrent second redemption loses the race to the burn write, not to a check-then-act gap.
 5. Give the ticket a short TTL (minutes); a fresh mint overwrites any previous ticket on the same record, so re-displaying the code invalidates the old link.
+6. **When the second device captures images — the usual reason for this hand-off — one PDF is the record.** Compose every photo the phone takes into a single PDF, in capture order, and upload that file once. Never store each image as its own attachment. This matters most before CQD abstraction: it reads one multi-page document as a whole, in one job, where separate images become one job each with fragmented results. And keep nothing from the capture on the phone: pages live only in memory, are never written to browser storage, and are cleared as soon as the upload succeeds. The full capture flow is [phone-camera-capture-to-one-pdf.md](phone-camera-capture-to-one-pdf.md).
 
 ## Minimal example
 

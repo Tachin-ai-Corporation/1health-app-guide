@@ -38,8 +38,8 @@ recipe you're already using — see [patient-documents.md](patient-documents.md)
 7. **Compose multi-photo *uploads* too, not just camera captures.** When a user adds two or more
    images at once (gallery pick, drag and drop), compose them into one PDF before uploading. PDFs
    and TIFFs (often multi-page faxes) upload as they are. Split into "part 1 of 2" only to stay
-   under the upload cap, keeping every page in order. A downstream extraction pipeline reads one
-   multi-page document as a whole, and faster, than the same pages as separate images — see
+   under the upload cap, keeping every page in order. Downstream extraction (CQD abstraction) reads
+   one multi-page document as a whole, and faster, than the same pages as separate images — see
    [phone-camera-capture-to-one-pdf.md](phone-camera-capture-to-one-pdf.md).
 
 ## Minimal example

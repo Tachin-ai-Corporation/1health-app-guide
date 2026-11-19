@@ -68,6 +68,10 @@ function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)) }
 
 ## Gotchas
 
+- **Submit one document per capture, not one job per photo.** For document extraction such as CQD
+  abstraction, compose a capture's photos into one PDF first and submit that single file
+  ([phone-camera-capture-to-one-pdf.md](phone-camera-capture-to-one-pdf.md)). Per-photo jobs
+  multiply the jobs and fragment the results, so a summary ends up drawn from a single page.
 - **The vendor's API key is a credential** — hold it only in your server route, never forward it to
   (or accept it from) the browser.
 - **Vendor results routinely expire** (observed: as little as 3 days) — persist into 1health as
