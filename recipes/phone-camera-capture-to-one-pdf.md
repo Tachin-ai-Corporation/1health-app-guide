@@ -21,25 +21,34 @@ photos at once on any upload screen.
    `getUserMedia({ video: { facingMode: { ideal: "environment" } } })` and a shutter button. Each tap
    grabs the current frame as a downscaled JPEG (e.g. 1600 px longest edge, quality about 0.72). Show
    thumbnails with retake and remove. Fall back to
-   `<input type="file" accept="image/*" capture="environment">` when `getUserMedia` is missing or
-   denied.
+   `<input type="file" accept="image/*" capture="environment">` only when `getUserMedia` is missing
+   or denied — that path hands the shot to the phone's own camera or picker (see step 5).
 4. **On Done, upload one PDF — the PDF is the record.** Compose every page into **one PDF** in the
    browser ([client-side-pdf-authoring.md](client-side-pdf-authoring.md)) and check its size against
    your upload cap. Upload it **once** to the step's attachment relation, under the user's own
    identity. That file holds every captured page; no page is stored as a separate image. Then record
    it server-side in your app's manifest — after checking that the file id really is on that record,
    never trusting a client-supplied id.
-5. **The phone only captures; the desktop hands the one PDF to CQD abstraction, once.** After the
+5. **Nothing stays on the phone.** Captured pages and the composed PDF live only in memory (component
+   state) for the length of the capture. Never write them to `localStorage`, `sessionStorage`,
+   IndexedDB, the Cache API or a service-worker cache, never offer a download or share, and release
+   any object URL as soon as it's drawn. As soon as the upload succeeds — and again on "I'm done" —
+   clear the pages and stop the camera; from then on show a page count, not thumbnails. The in-page
+   camera never creates a file on the device. The file-input fallback can: it hands the shot to the
+   phone's own camera app or picker, which may keep a copy in the photo library that the page can't
+   see or delete. So prefer the in-page camera, and on the fallback path tell the user the photo may
+   also be in their library.
+6. **The phone only captures; the desktop hands the one PDF to CQD abstraction, once.** After the
    upload the phone says "Finish on your desktop." The desktop picks up the new file
    ([poll-and-diff-live-sync.md](poll-and-diff-live-sync.md)), submits that single PDF — fetched back
    by its file id — as one extraction job ([external-job-pipeline.md](external-job-pipeline.md)), and
    attaches the resulting Care Quality Data to the patient's medical record by reference to the same
    file ([external-record-to-medical-record.md](external-record-to-medical-record.md)). One
    capture, one document, one job, one record.
-6. **End the phone session.** Offer "I'm done" to clear the session cookies the hand-off gave the
+7. **End the phone session.** Offer "I'm done" to clear the session cookies the hand-off gave the
    phone, with **exactly** the attributes they were set with (`Secure; SameSite=None; Partitioned`).
    A clear with different attributes writes a different cookie and leaves the live session in place.
-7. **Apply the same rule on every upload screen.** When a user adds two or more photos at once
+8. **Apply the same rule on every upload screen.** When a user adds two or more photos at once
    (gallery pick, drag and drop), compose them into one PDF before uploading as well. Pasted text
    goes the same way: compose it into a PDF and send it through the same upload, so every intake
    path reaches CQD abstraction as one document. PDFs and TIFFs (often multi-page faxes) upload as
@@ -65,19 +74,32 @@ The phone's capture screen (live camera, with the file-input fallback):
 import { useEffect, useRef, useState } from "react"
 import { frameToPage, fileToPage, type PageImage } from "./pages"
 
-export function CaptureScreen({ onDone }: { onDone: (pages: PageImage[]) => void }) {
+// Pages live only in this component's memory — never in browser storage, a cache, or a download.
+export function CaptureScreen({ onDone }: { onDone: (pages: PageImage[]) => Promise<void> }) {
   const video = useRef<HTMLVideoElement>(null)
+  const cameraStream = useRef<MediaStream | null>(null)
   const [pages, setPages] = useState<PageImage[]>([])
   const [cameraOk, setCameraOk] = useState(true)
+  const [uploaded, setUploaded] = useState(0)
 
+  const stopCamera = () => cameraStream.current?.getTracks().forEach((t) => t.stop())
   useEffect(() => {
-    let stream: MediaStream | undefined
     navigator.mediaDevices?.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
-      .then((s) => { stream = s; if (video.current) video.current.srcObject = s })
+      .then((s) => { cameraStream.current = s; if (video.current) video.current.srcObject = s })
       .catch(() => setCameraOk(false)) // denied, or no camera API: offer the file input instead
     if (!navigator.mediaDevices?.getUserMedia) setCameraOk(false)
-    return () => stream?.getTracks().forEach((t) => t.stop())
+    return stopCamera
   }, [])
+
+  // Upload first; only once it succeeds, drop every page from memory and stop the camera.
+  // If the upload throws, the pages stay so the user can retry.
+  const finish = async () => {
+    await onDone(pages)
+    setUploaded(pages.length)
+    setPages([])
+    stopCamera()
+  }
+  if (uploaded) return <p>{uploaded} page{uploaded === 1 ? "" : "s"} attached. Finish on your desktop.</p> // a count, no thumbnails
 
   const shoot = () => video.current && setPages((p) => [...p, frameToPage(video.current!)])
   const remove = (i: number) => setPages((p) => p.filter((_, j) => j !== i))
@@ -94,7 +116,7 @@ export function CaptureScreen({ onDone }: { onDone: (pages: PageImage[]) => void
         ? <><video ref={video} autoPlay playsInline muted /><button onClick={shoot}>Capture page</button></>
         : <input type="file" accept="image/*" capture="environment" multiple onChange={(e) => addPhotos(e.target.files)} />}
       <ol>{pages.map((p, i) => <li key={i}><img src={p.jpegDataUrl} alt={`Page ${i + 1}`} width={80} /><button onClick={() => remove(i)}>Remove</button></li>)}</ol>
-      <button disabled={!pages.length} onClick={() => onDone(pages)}>Done</button>
+      <button disabled={!pages.length} onClick={() => finish().catch(() => { /* pages stay: show your retry message */ })}>Done</button>
     </div>
   )
 }
@@ -203,6 +225,15 @@ export async function startCapture(recordId: number) {
 - **Don't rotate twice.** Current browsers already apply EXIF orientation when drawing an image to a
   canvas.
 - **Text the link only to a verified mobile** ([add-a-phone-for-mfa.md](add-a-phone-for-mfa.md)).
+- **Keep the page free of storage on purpose.** No page image, PDF, or extracted field ever goes
+  into browser storage, a cache, a download, a URL, or a log. A lint-style check that fails on any
+  `localStorage` / `sessionStorage` / IndexedDB / Cache API use keeps it that way as the app grows.
+- **The fallback path can leave a copy you can't remove.** The phone's own camera app or picker may
+  save the photo to the photo library. Only the in-page camera guarantees nothing is left on the
+  device.
+- **Tab switchers keep a screenshot.** Browsers keep a small picture of each tab for their tab
+  switcher, so page thumbnails on screen can end up in it. Show thumbnails only while capturing, and
+  a count once the upload succeeds.
 
 ## Related
 
