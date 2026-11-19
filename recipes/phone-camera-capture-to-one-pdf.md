@@ -23,28 +23,35 @@ photos at once on any upload screen.
    thumbnails with retake and remove. Fall back to
    `<input type="file" accept="image/*" capture="environment">` when `getUserMedia` is missing or
    denied.
-4. **On Done, upload one PDF.** Compose every page into **one PDF** in the browser
-   ([client-side-pdf-authoring.md](client-side-pdf-authoring.md)) and check its size against your
-   upload cap. Upload it **once** to the step's attachment relation, under the user's own identity.
-   Then record it server-side in your app's manifest — after checking that the file id really is on
-   that record, never trusting a client-supplied id.
-5. **The phone only captures.** After the upload it says "Finish on your desktop." The desktop
-   picks up the new file ([poll-and-diff-live-sync.md](poll-and-diff-live-sync.md)) and runs any
-   reading or extraction there, once.
+4. **On Done, upload one PDF — the PDF is the record.** Compose every page into **one PDF** in the
+   browser ([client-side-pdf-authoring.md](client-side-pdf-authoring.md)) and check its size against
+   your upload cap. Upload it **once** to the step's attachment relation, under the user's own
+   identity. That file holds every captured page; no page is stored as a separate image. Then record
+   it server-side in your app's manifest — after checking that the file id really is on that record,
+   never trusting a client-supplied id.
+5. **The phone only captures; the desktop hands the one PDF to CQD abstraction, once.** After the
+   upload the phone says "Finish on your desktop." The desktop picks up the new file
+   ([poll-and-diff-live-sync.md](poll-and-diff-live-sync.md)), submits that single PDF — fetched back
+   by its file id — as one extraction job ([external-job-pipeline.md](external-job-pipeline.md)), and
+   attaches the resulting Care Quality Data to the patient's medical record by reference to the same
+   file ([external-record-to-medical-record.md](external-record-to-medical-record.md)). One
+   capture, one document, one job, one record.
 6. **End the phone session.** Offer "I'm done" to clear the session cookies the hand-off gave the
    phone, with **exactly** the attributes they were set with (`Secure; SameSite=None; Partitioned`).
    A clear with different attributes writes a different cookie and leaves the live session in place.
 7. **Apply the same rule on every upload screen.** When a user adds two or more photos at once
-   (gallery pick, drag and drop), compose them into one PDF before uploading as well. PDFs and TIFFs
-   (often multi-page faxes) upload as they are. Split into "part 1 of 2" only to stay under the cap,
-   keeping every page in order.
+   (gallery pick, drag and drop), compose them into one PDF before uploading as well. Pasted text
+   goes the same way: compose it into a PDF and send it through the same upload, so every intake
+   path reaches CQD abstraction as one document. PDFs and TIFFs (often multi-page faxes) upload as
+   they are. Split into "part 1 of 2" only to stay under the cap, keeping every page in order.
 
 ## Primary vs fallback
 
-- **Primary — one PDF per capture:** a document-extraction pipeline reads one multi-page document as
-  a whole, so the narrative holds together and a table that spans two photos stays in one piece. Its
-  maintainers report it's much faster than the same pages as separate images, at the same per-page
-  cost, and the record gets one entry instead of N.
+- **Primary — one PDF per capture, and that PDF is the record:** CQD abstraction (the document
+  extraction that produces Care Quality Data) reads one multi-page document as a whole, so the
+  narrative holds together and a table that spans two photos stays in one piece. Its maintainers
+  report it's much faster than the same pages as separate images, at the same per-page cost, and
+  the record gets one entry instead of N.
 - **Fallback — "part 1 of N" PDFs:** only when one PDF would exceed the upload cap; split at page
   boundaries, in order.
 - **Not a fallback — one upload per photo.** A case uploaded as 34 separate gallery photos produced
@@ -205,7 +212,10 @@ export async function startCapture(recordId: number) {
 - [attachments.md](attachments.md) — the step attachment relation the PDF lands on.
 - [native-email-and-sms.md](native-email-and-sms.md) — texting the link.
 - [poll-and-diff-live-sync.md](poll-and-diff-live-sync.md) — the desktop noticing the new file.
-- [external-job-pipeline.md](external-job-pipeline.md) — reading the PDF once, on the desktop.
+- [external-job-pipeline.md](external-job-pipeline.md) — submitting the one PDF to CQD abstraction,
+  once, from the desktop.
+- [external-record-to-medical-record.md](external-record-to-medical-record.md) — attaching the
+  resulting Care Quality Data to the patient's record, by reference to the same file.
 - [iframe-embedding-cookies.md](iframe-embedding-cookies.md) — why the session cookies carry
   `Secure; SameSite=None; Partitioned`.
 - [add-a-phone-for-mfa.md](add-a-phone-for-mfa.md) — the verified mobile the link can be texted to.

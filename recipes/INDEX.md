@@ -77,7 +77,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [bulk-tagging](bulk-tagging.md) | Tag instances in bulk (GraphQL list + REST apply/remove) |
 | [bulk-assignment](bulk-assignment.md) | Assign/unassign users to journeys in bulk |
 | [saved-grid-views](saved-grid-views.md) | Personal and shared saved grid views (`/v2/grid-config`) |
-| [phone-camera-capture-to-one-pdf](phone-camera-capture-to-one-pdf.md) | Hand off to a phone by QR or text, capture pages with its camera, upload one PDF to the step |
+| [phone-camera-capture-to-one-pdf](phone-camera-capture-to-one-pdf.md) | Hand off to a phone by QR or text, capture pages with its camera, upload one PDF (the record) to the step for CQD abstraction |
 
 ## Sharing & partner orgs
 | Recipe | For |
@@ -176,7 +176,7 @@ Reference code · Seen in · Pattern · (Primary vs fallback) · Minimal example
 | [split-identity-service-key](split-identity-service-key.md) · **adv** | User token vs privileged service key, per-op, enforced |
 | [cross-tenant-read-proxy](cross-tenant-read-proxy.md) · **adv** | Read-only cross-tenant proxy (flag + fallback) |
 | [isomorphic-trust-boundary-core](isomorphic-trust-boundary-core.md) · **adv** | Share one query/parse core across trust boundaries |
-| [qr-device-session-handoff](qr-device-session-handoff.md) · **adv** | Sealed single-use QR device-session hand-off |
+| [qr-device-session-handoff](qr-device-session-handoff.md) · **adv** | Sealed single-use QR device-session hand-off; a phone capture becomes one PDF, the record |
 | [provider-minted-magic-link](provider-minted-magic-link.md) · **adv** | Provider-minted magic link, verified downstream |
 | [in-app-agent-docs-mirror](in-app-agent-docs-mirror.md) · **adv** | Mirror agents.1health.io docs in-app (SSRF allowlist) |
 | [in-app-api-inspector](in-app-api-inspector.md) · **adv** | Live in-app API call inspector (devtool) |
